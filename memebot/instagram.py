@@ -4,9 +4,12 @@ import re
 from .common import Post, SourceError, http_get, parse_count, parse_relative_time
 
 
-def _from_imginn(username: str) -> list[Post]:
-    """Public mirror that serves the latest ~12 posts without an Instagram login."""
-    page = http_get(f"https://imginn.com/{username}/").text
+MIRRORS = ("https://imginn.com/{}/", "https://imgsed.com/{}/")
+
+
+def _from_mirror(url_template: str, username: str) -> list[Post]:
+    """Public mirrors that serve the latest ~12 posts without an Instagram login."""
+    page = http_get(url_template.format(username)).text
     posts = []
     for block in page.split('<div class="item">')[1:]:
         code = re.search(r'href="/p/([\w-]+)/"', block)
@@ -30,7 +33,7 @@ def _from_imginn(username: str) -> list[Post]:
             is_video="icon-video" in block,
         ))
     if not posts:
-        raise SourceError(f"imginn returned no posts for {username}")
+        raise SourceError(f"{url_template.split('/')[2]} returned no posts for {username}")
     return posts
 
 
@@ -63,10 +66,14 @@ def _from_instagram_api(username: str) -> list[Post]:
 
 
 def fetch_account(username: str) -> list[Post]:
-    try:
-        return _from_imginn(username)
-    except Exception as first:
+    problems = []
+    for template in MIRRORS:
         try:
-            return _from_instagram_api(username)
-        except Exception as second:
-            raise SourceError(f"imginn: {first} | instagram api: {second}")
+            return _from_mirror(template, username)
+        except Exception as e:
+            problems.append(f"{template.split('/')[2]}: {e}")
+    try:
+        return _from_instagram_api(username)
+    except Exception as e:
+        problems.append(f"instagram.com: {e}")
+    raise SourceError(" | ".join(problems))

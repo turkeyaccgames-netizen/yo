@@ -42,7 +42,10 @@ class SourceError(Exception):
 _local = threading.local()
 
 
-def http_get(url: str, *, params=None, headers=None, cookies=None, timeout=30, retries=2):
+RETRY_STATUSES = (429, 500, 502, 503, 504)
+
+
+def http_get(url: str, *, params=None, headers=None, cookies=None, timeout=30, retries=2, retry_statuses=RETRY_STATUSES):
     if not hasattr(_local, "session"):
         _local.session = requests.Session(impersonate="chrome")
     last = None
@@ -52,7 +55,7 @@ def http_get(url: str, *, params=None, headers=None, cookies=None, timeout=30, r
             if r.status_code == 200:
                 return r
             last = SourceError(f"HTTP {r.status_code} for {url}")
-            if r.status_code not in (429, 500, 502, 503, 504):
+            if r.status_code not in retry_statuses:
                 break
         except Exception as e:  # network errors
             last = SourceError(f"{type(e).__name__}: {e}")

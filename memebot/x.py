@@ -1,13 +1,15 @@
 from urllib.parse import quote
 
-from .common import Post, SourceError, http_get
+from .common import RETRY_STATUSES, Post, SourceError, http_get
 
 # FxTwitter public API (https://api.fxtwitter.com) — free, no login, 1000 req/min per IP.
 API = "https://api.fxtwitter.com/2"
 
 
 def fetch_account(handle: str) -> list[Post]:
-    data = http_get(f"{API}/profile/{handle}/statuses", params={"count": 20}).json()
+    # FxTwitter answers 404 now and then for accounts that do exist, so 404 is retried here.
+    data = http_get(f"{API}/profile/{handle}/statuses", params={"count": 20},
+                    retries=3, retry_statuses=RETRY_STATUSES + (404,)).json()
     if data.get("code") != 200:
         raise SourceError(f"fxtwitter code {data.get('code')} for {handle}")
     posts = []

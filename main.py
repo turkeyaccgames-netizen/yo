@@ -171,7 +171,10 @@ def send_trends(results: dict, cfg: dict, state: dict, tg: Telegram):
 
 
 def track_failures(results: dict, errors: dict, state: dict, tg: Telegram):
+    state.setdefault("last_error", {})
     for platform, errs in errors.items():
+        # Kept in state.json so a failure on the GitHub servers can be diagnosed later.
+        state["last_error"][platform] = errs[0][:500] if errs else ""
         previous = state["failures"].get(platform, 0)
         if errs and not results[platform]:
             state["failures"][platform] = previous + 1
