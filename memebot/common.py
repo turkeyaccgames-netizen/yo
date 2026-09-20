@@ -42,13 +42,13 @@ class SourceError(Exception):
 _local = threading.local()
 
 
-def http_get(url: str, *, params=None, headers=None, timeout=30, retries=2):
+def http_get(url: str, *, params=None, headers=None, cookies=None, timeout=30, retries=2):
     if not hasattr(_local, "session"):
         _local.session = requests.Session(impersonate="chrome")
     last = None
     for attempt in range(retries + 1):
         try:
-            r = _local.session.get(url, params=params, headers=headers, timeout=timeout)
+            r = _local.session.get(url, params=params, headers=headers, cookies=cookies, timeout=timeout)
             if r.status_code == 200:
                 return r
             last = SourceError(f"HTTP {r.status_code} for {url}")

@@ -8,7 +8,7 @@ import tomllib
 from concurrent.futures import ThreadPoolExecutor
 from pathlib import Path
 
-from memebot import instagram, tiktok, x, youtube
+from memebot import filters, instagram, tiktok, x, youtube
 from memebot.common import PLATFORM_LABELS
 from memebot.telegram import Telegram, TelegramConnectionError, TelegramError, author_link, esc, shorten, stats_line
 
@@ -50,7 +50,9 @@ def save_state(state: dict):
 def collect(cfg: dict, state: dict):
     """Fetch recent posts for every configured account. Returns ({platform: {account: posts}}, {platform: [errors]})."""
     jobs = {
-        "youtube": (cfg["youtube"]["channels"], lambda ref: youtube.fetch_channel(youtube.resolve_channel_id(ref, state["yt_ids"])), 4),
+        "youtube": (cfg["youtube"]["channels"],
+                    lambda ref: youtube.fetch_channel(youtube.resolve_channel_id(ref, state["yt_ids"]),
+                                                      shorts_only=cfg["youtube"].get("shorts_only", False)), 4),
         "instagram": (cfg["instagram"]["accounts"], instagram.fetch_account, 2),
         "tiktok": (cfg["tiktok"]["accounts"], tiktok.fetch_account, 3),
         "x": (cfg["x"]["accounts"], x.fetch_account, 4),
@@ -92,6 +94,7 @@ def send_new_posts(results: dict, cfg: dict, state: dict, tg: Telegram) -> int:
                     state["seen"][p.key] = int(now)
                 continue
             sendable = [p for p in fresh if not p.timestamp or now - p.timestamp <= max_age]
+            sendable = filters.drop_serious(sendable, cfg["filters"])
             sendable = sendable[-settings["max_new_per_account"]:]
             for p in fresh:
                 if p not in sendable:
@@ -126,10 +129,17 @@ def send_trends(results: dict, cfg: dict, state: dict, tg: Telegram):
     except Exception as e:
         print(f"[tiktok] trending feed failed: {e}")
 
+    fcfg = cfg["filters"]
     for platform, posts in candidates.items():
         unique = {p.key: p for p in posts if p.key not in state["trend_sent"]}.values()
+        pool = filters.drop_serious(list(unique), fcfg)
+        if fcfg.get("funny_first", True):
+            # Keep only the funny/cool ones, unless that leaves too few to fill the digest.
+            funny = [p for p in pool if filters.is_funny(p, fcfg)]
+            if len(funny) >= t["top_n"]:
+                pool = funny
         top, per_author = [], {}
-        for p in sorted(unique, key=lambda p: p.popularity, reverse=True):
+        for p in sorted(pool, key=lambda p: p.popularity, reverse=True):
             if len(top) < t["top_n"] and per_author.get(p.author.lower(), 0) < 2:
                 top.append(p)
                 per_author[p.author.lower()] = per_author.get(p.author.lower(), 0) + 1
@@ -137,6 +147,9 @@ def send_trends(results: dict, cfg: dict, state: dict, tg: Telegram):
         if platform == "x":
             try:
                 topics = x.fetch_trend_topics(t["x_topics"])
+                if fcfg.get("skip_serious", True):
+                    topics = [(name, ctx, url) for name, ctx, url in topics
+                              if not filters.contains(f"{name} {ctx}", fcfg.get("blocked_keywords", []))]
             except Exception as e:
                 print(f"[x] trend topics failed: {e}")
         if not top and not topics:

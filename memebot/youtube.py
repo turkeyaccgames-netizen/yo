@@ -20,15 +20,17 @@ def resolve_channel_id(ref: str, cache: dict) -> str:
     if ref in cache:
         return cache[ref]
     handle = ref.lstrip("@")
-    r = http_get(f"https://www.youtube.com/@{handle}", headers={"Accept-Language": "en-US,en;q=0.9"})
-    m = re.search(r'"externalId":"(UC[\w-]{22})"', r.text)
+    # The cookies skip YouTube's cookie-consent interstitial, which otherwise hides the channel id.
+    r = http_get(f"https://www.youtube.com/@{handle}", headers={"Accept-Language": "en-US,en;q=0.9"},
+                 cookies={"SOCS": "CAI", "CONSENT": "YES+1"})
+    m = re.search(r'"externalId":"(UC[\w-]{22})"', r.text) or re.search(r'channel/(UC[\w-]{22})', r.text)
     if not m:
         raise SourceError(f"could not resolve YouTube handle {ref}")
     cache[ref] = m.group(1)
     return cache[ref]
 
 
-def fetch_channel(channel_id: str) -> list[Post]:
+def fetch_channel(channel_id: str, shorts_only: bool = False) -> list[Post]:
     r = http_get("https://www.youtube.com/feeds/videos.xml", params={"channel_id": channel_id})
     root = ET.fromstring(r.content)
     posts = []
@@ -48,6 +50,9 @@ def fetch_channel(channel_id: str) -> list[Post]:
             timestamp=int(datetime.fromisoformat(published).timestamp()) if published else None,
             is_video=True,
         ))
+    if shorts_only:
+        # The feed links a Short as youtube.com/shorts/<id> and a normal video as /watch?v=<id>.
+        posts = [p for p in posts if "/shorts/" in p.url]
     return posts
 
 

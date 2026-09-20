@@ -7,22 +7,24 @@
 max_new_per_account = 3
 # پست‌هایی قدیمی‌تر از این (ساعت) به عنوان «پست جدید» فرستاده نمیشن (مثلاً پست پین‌شده)
 max_post_age_hours = 48
-# هر چند ساعت یکبار گزارش ترندها فرستاده بشه
-trends_every_hours = 6
+# هر چند ساعت یکبار گزارش ترند فرستاده بشه
+trends_every_hours = 3
 
 [youtube]
+# فقط ویدیوهای شورت فرستاده بشن؟ (ویدیوهای بلند نادیده گرفته میشن)
+shorts_only = true
 # آیدی کانال (UC...) یا هندل (@name)
 channels = [
-    "UCdC0An4ZPNr_YiFiYoVbwaw", # Daily Dose Of Internet
+    "UCIjMIhAKynZMG2DafgPm6uQ", # Noah Glenn Carter
+    "UC86suRFnqiw8zN6LIYxddYQ", # Khaby Lame
     "UCPDis9pjXuqyI7RYLJ-TTSA", # FailArmy
     "UCYRE3PMYatMVXmqmulF0sgA", # LADbible
     "UCY30JRSgfhYXA6i6xX1erWg", # Smosh
-    "UCX6OQ3DkcsbYNE6H8uQQuVA", # MrBeast
-    "UC86suRFnqiw8zN6LIYxddYQ", # Khaby Lame
+    "UC56D-IHcUvLVFTX_8NpQMXg", # Brent Rivera
     "UCq8DICunczvLuJJq414110A", # Zach King
     "UCRijo3ddMTht_IHyNSNXpNQ", # Dude Perfect
-    "UCb4pvsyqNrmBIGJFQxEukUA", # MemeAnalysis
-    "UC-lHJZR3Gqxm24_Vd_AJ5Yw", # PewDiePie
+    "UClFN9LShD_Pv0wnSeUKbUZw", # That Little Puff
+    "UCdC0An4ZPNr_YiFiYoVbwaw", # Daily Dose Of Internet
 ]
 
 [instagram]
@@ -80,3 +82,33 @@ youtube_region = "US"
 tiktok_region = "US"
 # تعداد موضوع ترند X
 x_topics = 10
+
+[filters]
+# در گزارش ترند، پست‌های خنده‌دار و باحال اول بیان
+funny_first = true
+# پست‌های خبری و ناراحت‌کننده اصلاً فرستاده نشن (هم در پست‌های جدید، هم در ترندها)
+skip_serious = true
+
+# نشانه‌های پست خنده‌دار یا باحال
+funny_keywords = [
+    "funny", "funniest", "meme", "memes", "lol", "lmao", "lmfao", "comedy", "comedian",
+    "joke", "jokes", "hilarious", "humor", "humour", "laugh", "laughing", "prank", "pranks",
+    "fail", "fails", "silly", "goofy", "dumb", "cursed", "relatable", "pov", "wait for it",
+    "gone wrong", "caught on camera", "satisfying", "insane", "crazy", "epic", "wholesome",
+    "cute", "adorable", "cat", "cats", "kitten", "dog", "dogs", "puppy", "magic", "trick",
+    "skills", "unbelievable", "mind blowing", "no way", "bro", "😂", "🤣", "💀", "😭", "🤡",
+    "😹", "🙃", "😅", "🔥", "🤯", "😳", "🤪", "#funny", "#meme", "#memes", "#comedy", "#fail",
+]
+
+# نشانه‌های پست خبری، سیاسی یا ناراحت‌کننده
+blocked_keywords = [
+    "died", "dies", "dead", "death", "killed", "kills", "murder", "murdered", "shooting",
+    "shot dead", "stabbed", "war", "airstrike", "bombing", "hostage", "terror", "terrorist",
+    "israel", "gaza", "hamas", "ukraine", "russia", "putin", "trump", "biden", "election",
+    "senate", "congress", "president", "politics", "political", "court", "lawsuit", "jail",
+    "prison", "arrested", "charged", "police", "crime", "victim", "victims", "tragedy",
+    "tragic", "funeral", "rip", "suicide", "overdose", "abuse", "assault", "harassment",
+    "cancer", "hospital", "hospitalized", "illness", "crash", "crashed", "accident",
+    "earthquake", "wildfire", "flood", "hurricane", "missing", "kidnapped", "racist",
+    "racism", "layoffs", "recession", "stocks", "inflation", "deported", "immigration",
+]
