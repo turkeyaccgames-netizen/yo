@@ -1,0 +1,2 @@
+# yt-dlp is intentionally unpinned: TikTok/YouTube extractors need frequent updates.
+yt-dlp[default,curl-cffi]

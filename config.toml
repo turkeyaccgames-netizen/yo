@@ -1,0 +1,82 @@
+# تنظیمات ربات میم
+# هر اکانتی رو خواستی اضافه یا حذف کن. اکانت جدید دفعه‌ی اول فقط «دیده‌شده» ثبت میشه
+# تا پست‌های قدیمیش یکجا برات فرستاده نشه.
+
+[settings]
+# حداکثر تعداد پست جدیدی که از هر اکانت در هر اجرا فرستاده میشه
+max_new_per_account = 3
+# پست‌هایی قدیمی‌تر از این (ساعت) به عنوان «پست جدید» فرستاده نمیشن (مثلاً پست پین‌شده)
+max_post_age_hours = 48
+# هر چند ساعت یکبار گزارش ترندها فرستاده بشه
+trends_every_hours = 6
+
+[youtube]
+# آیدی کانال (UC...) یا هندل (@name)
+channels = [
+    "UCdC0An4ZPNr_YiFiYoVbwaw", # Daily Dose Of Internet
+    "UCPDis9pjXuqyI7RYLJ-TTSA", # FailArmy
+    "UCYRE3PMYatMVXmqmulF0sgA", # LADbible
+    "UCY30JRSgfhYXA6i6xX1erWg", # Smosh
+    "UCX6OQ3DkcsbYNE6H8uQQuVA", # MrBeast
+    "UC86suRFnqiw8zN6LIYxddYQ", # Khaby Lame
+    "UCq8DICunczvLuJJq414110A", # Zach King
+    "UCRijo3ddMTht_IHyNSNXpNQ", # Dude Perfect
+    "UCb4pvsyqNrmBIGJFQxEukUA", # MemeAnalysis
+    "UC-lHJZR3Gqxm24_Vd_AJ5Yw", # PewDiePie
+]
+
+[instagram]
+accounts = [
+    "9gag",
+    "memes",
+    "daquan",
+    "pubity",
+    "ladbible",
+    "memezar",
+    "barstoolsports",
+    "dudewithsign",
+    "unilad",
+    "epicfunnypage",
+]
+
+[tiktok]
+accounts = [
+    "9gag",
+    "ladbible",
+    "unilad",
+    "memezar",
+    "barstoolsports",
+    "khaby.lame",
+    "zachking",
+    "kallmekris",
+    "brentrivera",
+    "pubity",
+]
+
+[x]
+# توییت‌های پربازدید این اکانت‌ها در بخش ترند X فرستاده میشن
+accounts = [
+    "9GAG",
+    "PopBase",
+    "DailyLoud",
+    "CrazyClips_",
+    "Dexerto",
+    "barstoolsports",
+    "LADbible",
+    "pubity",
+    "dudewithsign",
+    "UNILAD",
+]
+
+[trends]
+# بازه‌ی زمانی برای پیدا کردن پست‌های پربازدید (ساعت)
+window_hours = 24
+# تعداد آیتم از هر پلتفرم در هر گزارش ترند
+top_n = 5
+# فقط وقتی YOUTUBE_API_KEY تنظیم شده باشه استفاده میشه
+youtube_query = "memes|funny"
+youtube_region = "US"
+# منطقه‌ی فید ترند تیک‌تاک
+tiktok_region = "US"
+# تعداد موضوع ترند X
+x_topics = 10
