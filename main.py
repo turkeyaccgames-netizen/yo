@@ -2,13 +2,14 @@
 import argparse
 import json
 import os
+import shutil
 import sys
 import time
 import tomllib
 from concurrent.futures import ThreadPoolExecutor
 from pathlib import Path
 
-from memebot import filters, instagram, tiktok, x, youtube
+from memebot import combos, filters, instagram, media, tiktok, x, youtube
 from memebot.common import PLATFORM_LABELS
 from memebot.telegram import Telegram, TelegramConnectionError, TelegramError, author_link, esc, shorten, stats_line
 
@@ -44,6 +45,7 @@ def save_state(state: dict):
     now = time.time()
     state["seen"] = {k: t for k, t in state["seen"].items() if now - t < 30 * 86400}
     state["trend_sent"] = {k: t for k, t in state["trend_sent"].items() if now - t < 7 * 86400}
+    state["combo_sent"] = {k: t for k, t in state.get("combo_sent", {}).items() if now - t < 7 * 86400}
     STATE_FILE.write_text(json.dumps(state, indent=1, ensure_ascii=False, sort_keys=True), encoding="utf-8")
 
 
@@ -170,6 +172,82 @@ def send_trends(results: dict, cfg: dict, state: dict, tg: Telegram):
     state["last_trends"] = int(now)
 
 
+def send_pair(combo: dict, ccfg: dict, tg: Telegram):
+    """One ready-to-make meme: the clip as a real file, plus the line to lay over it."""
+    tweet, video = combo["tweet"], combo["video"]
+    topic = f" · موضوع مشترک: {esc(', '.join(combo['shared']))}" if combo["shared"] else ""
+    caption = (
+        f"🎬 <b>ترکیب پیشنهادی</b>{topic}\n\n"
+        f"✍️ متن روی کلیپ (لمس کن تا کپی شود):\n<code>{esc(' '.join(tweet.text.split()))}</code>\n\n"
+        f"📹 کلیپ از {author_link(video)} · {stats_line(video)}\n"
+        f"🔗 <a href=\"{esc(video.url)}\">کلیپ</a> · <a href=\"{esc(tweet.url)}\">توییت</a>"
+    )
+    clip = media.download_video(video.url, ccfg.get("max_video_mb", 45))
+    sent = tg.send_video_file(clip, caption, video.url) if clip else False
+    if clip:
+        shutil.rmtree(clip.parent, ignore_errors=True)
+    if not sent:  # download blocked or upload refused: the links still do the job
+        tg.send_card(caption, video.thumbnail, video.url)
+
+
+def send_pack(pack: dict, tg: Telegram):
+    lines = [f"🧩 <b>بسته‌ی هم‌موضوع: {esc(pack['topic'])}</b>",
+             "چند پست درباره‌ی یک ماجرا؛ می‌توانی کنار هم تدوین کنی:"]
+    for i, p in enumerate(pack["posts"], 1):
+        lines.append(f"\n<b>{i}.</b> {PLATFORM_LABELS[p.platform]} {author_link(p)}\n"
+                     f"<a href=\"{esc(p.url)}\">{esc(shorten(p.text, 90)) or 'دیدن'}</a>\n{stats_line(p)}")
+    tg.send_text("\n".join(lines), preview_url=pack["posts"][0].url)
+
+
+def send_combos(results: dict, cfg: dict, state: dict, tg: Telegram):
+    ccfg, fcfg = cfg["combos"], cfg["filters"]
+    now = time.time()
+    posts = [p for accounts in results.values() for ps in accounts.values() for p in ps
+             if p.timestamp and now - p.timestamp <= ccfg.get("window_hours", 48) * 3600]
+    posts = filters.drop_serious(posts, fcfg)
+    funny = lambda p: filters.is_funny(p, fcfg)  # noqa: E731
+    tweets = [p for p in posts if p.platform == "x"]
+    clips = [p for p in posts if p.platform != "x" and p.is_video]
+    state.setdefault("combo_sent", {})
+
+    sent = 0
+    for combo in combos.find_pairs(tweets, clips, ccfg, is_funny=funny):
+        if sent >= ccfg.get("pairs_per_run", 3):
+            break
+        key = f"{combo['tweet'].key}+{combo['video'].key}"
+        if key in state["combo_sent"] or combo["tweet"].key in state["combo_sent"]:
+            continue
+        try:
+            send_pair(combo, ccfg, tg)
+        except Exception as e:
+            print(f"[combos] ارسال ترکیب نشد: {e}")
+            continue
+        state["combo_sent"][key] = state["combo_sent"][combo["tweet"].key] = int(now)
+        sent += 1
+
+    hot = set()
+    try:
+        hot = {name.lstrip("#").lower() for name, _, _ in x.fetch_trend_topics(15)}
+    except Exception as e:
+        print(f"[combos] گرفتن موضوعات ترند نشد: {e}")
+    packs = 0
+    for pack in combos.find_packs(posts, ccfg, hot_topics=hot):
+        if packs >= ccfg.get("packs_per_run", 1):
+            break
+        key = f"pack:{pack['topic']}"
+        if key in state["combo_sent"]:
+            continue
+        try:
+            send_pack(pack, tg)
+        except Exception as e:
+            print(f"[combos] ارسال بسته نشد: {e}")
+            continue
+        state["combo_sent"][key] = int(now)
+        packs += 1
+    print(f"combos sent: {sent} pairs, {packs} packs")
+    state["last_combos"] = int(now)
+
+
 def track_failures(results: dict, errors: dict, state: dict, tg: Telegram):
     state.setdefault("last_error", {})
     for platform, errs in errors.items():
@@ -192,6 +270,7 @@ def main():
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("--dry-run", action="store_true", help="print messages instead of sending them; state is not saved")
     parser.add_argument("--trends", action="store_true", help="send the trend digest now, regardless of schedule")
+    parser.add_argument("--combos", action="store_true", help="send combo suggestions now, regardless of schedule")
     parser.add_argument("--sample", action="store_true", help="send the latest post from each platform to test the bot")
     parser.add_argument("--chat-id", action="store_true", help="list chats that have messaged the bot")
     parser.add_argument("--ping", action="store_true", help="send a single test message (fast connection check)")
@@ -236,6 +315,10 @@ def main():
     print(f"new posts sent: {sent}")
     if args.trends or time.time() - state["last_trends"] >= cfg["settings"]["trends_every_hours"] * 3600 - 600:
         send_trends(results, cfg, state, tg)
+    combo_cfg = cfg.get("combos", {})
+    if combo_cfg.get("enabled", True) and (
+            args.combos or time.time() - state.get("last_combos", 0) >= combo_cfg.get("every_hours", 3) * 3600 - 600):
+        send_combos(results, cfg, state, tg)
     track_failures(results, errors, state, tg)
     if not args.dry_run:
         save_state(state)

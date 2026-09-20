@@ -30,7 +30,10 @@ jobs:
           cache: pip
 
       - name: Install dependencies
-        run: pip install -U -r requirements.txt
+        run: |
+          # ffmpeg joins YouTube's separate video and audio streams before upload.
+          ffmpeg -version >/dev/null 2>&1 || sudo apt-get install -y -qq ffmpeg
+          pip install -U -r requirements.txt
 
       - name: Run bot
         env:

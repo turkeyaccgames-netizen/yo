@@ -66,18 +66,20 @@ class Telegram:
         self.chat_id = chat_id
         self.dry_run = dry_run
 
-    def call(self, method: str, data: dict, photo: tuple[bytes, str] | None = None) -> dict:
+    def call(self, method: str, data: dict, upload: tuple[str, str, str, bytes] | None = None) -> dict:
+        """`upload` is (field, filename, content type, bytes) for sendPhoto / sendVideo."""
         url = f"https://api.telegram.org/bot{self.token}/{method}"
         last_network_error = None
         for attempt in range(4):
             try:
-                if photo is not None:
+                if upload is not None:
+                    field, filename, content_type, blob = upload
                     mp = CurlMime()
                     try:
                         for k, v in data.items():
                             mp.addpart(name=k, data=str(v).encode())
-                        mp.addpart(name="photo", filename="preview", content_type=photo[1], data=photo[0])
-                        r = requests.post(url, multipart=mp, timeout=60)
+                        mp.addpart(name=field, filename=filename, content_type=content_type, data=blob)
+                        r = requests.post(url, multipart=mp, timeout=180)
                     finally:
                         mp.close()
                 else:
@@ -106,29 +108,49 @@ class Telegram:
         self.call("sendMessage", data)
         time.sleep(1.1)
 
-    def send_post(self, post: Post, badge: str = "🆕 پست جدید"):
-        head = f"{PLATFORM_LABELS[post.platform]} · {author_link(post)} · {badge}"
-        body = f"<i>{esc(shorten(post.text, 600))}</i>" if post.text else ""
-        link = f'🔗 <a href="{esc(post.url)}">{"دیدن ویدیو" if post.is_video else "دیدن پست"}</a>'
-        caption = "\n\n".join(p for p in (head, body, "\n".join(filter(None, (stats_line(post), link)))) if p)
+    def send_card(self, caption: str, thumbnail: str | None, preview_url: str | None):
+        """A picture with the caption under it, or plain text when the picture cannot be fetched."""
         if self.dry_run:
-            print(f"\n--- TELEGRAM (post, thumb={bool(post.thumbnail)}) ---\n{caption}")
+            print(f"\n--- TELEGRAM (card, thumb={bool(thumbnail)}) ---\n{caption}")
             return
         image = None
-        if post.thumbnail:
+        if thumbnail:
             try:
-                r = http_get(post.thumbnail, retries=1, timeout=20)
+                r = http_get(thumbnail, retries=1, timeout=20)
                 image = (r.content, r.headers.get("content-type") or "image/jpeg")
             except Exception:
                 image = None
         if image:
             try:
-                self.call("sendPhoto", {"chat_id": self.chat_id, "caption": caption[:1024], "parse_mode": "HTML"}, photo=image)
+                self.call("sendPhoto", {"chat_id": self.chat_id, "caption": caption[:1024], "parse_mode": "HTML"},
+                          upload=("photo", "preview", image[1], image[0]))
                 time.sleep(1.1)
                 return
             except TelegramError as e:
                 print(f"  ارسال عکس نشد، به جایش متن فرستاده می‌شود: {e}")
-        self.send_text(caption, preview_url=post.url)
+        self.send_text(caption, preview_url=preview_url)
+
+    def send_video_file(self, path, caption: str, preview_url: str | None = None) -> bool:
+        """Uploads the clip itself. Returns False when Telegram refuses it, so the caller can fall back."""
+        if self.dry_run:
+            print(f"\n--- TELEGRAM (video {path.name}) ---\n{caption}")
+            return True
+        try:
+            self.call("sendVideo", {"chat_id": self.chat_id, "caption": caption[:1024], "parse_mode": "HTML",
+                                    "supports_streaming": "true"},
+                      upload=("video", path.name, "video/mp4", path.read_bytes()))
+            time.sleep(1.1)
+            return True
+        except TelegramError as e:
+            print(f"  ارسال فایل ویدیو نشد: {e}")
+            return False
+
+    def send_post(self, post: Post, badge: str = "🆕 پست جدید"):
+        head = f"{PLATFORM_LABELS[post.platform]} · {author_link(post)} · {badge}"
+        body = f"<i>{esc(shorten(post.text, 600))}</i>" if post.text else ""
+        link = f'🔗 <a href="{esc(post.url)}">{"دیدن ویدیو" if post.is_video else "دیدن پست"}</a>'
+        caption = "\n\n".join(p for p in (head, body, "\n".join(filter(None, (stats_line(post), link)))) if p)
+        self.send_card(caption, post.thumbnail, post.url)
 
     def chat_ids(self) -> list[tuple[str, str]]:
         try:
