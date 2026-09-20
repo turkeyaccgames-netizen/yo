@@ -46,4 +46,11 @@ jobs:
           git config user.name "meme-bot"
           git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
           git add state.json
-          git diff --cached --quiet || (git commit -m "Update bot state" && git push)
+          git diff --cached --quiet && exit 0
+          git commit -m "Update bot state"
+          # main may have moved on (a new commit, or an overlapping run), so rebase before pushing.
+          for attempt in 1 2 3; do
+            git pull --rebase --autostash origin main && git push origin HEAD:main && exit 0
+            sleep 5
+          done
+          echo "::warning::could not push state.json; the next run will send these posts again"
