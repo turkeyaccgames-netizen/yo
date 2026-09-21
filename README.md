@@ -175,6 +175,8 @@ Actions
 | `python main.py --sample` | تست: آخرین پست هر چهار برنامه را بفرست |
 | `python main.py --dry-run` | پیام‌ها را فقط روی صفحه نشان بده، چیزی نفرست |
 | `python main.py --chat-id` | شماره‌ی چت شما را نشان بده |
+| `python main.py --only instagram` | فقط یک برنامه را چک کن (بقیه را نادیده بگیر) |
+| `python main.py --skip instagram` | همه را چک کن جز این یکی |
 | `python main.py --ping` | تست سریع اتصال: یک پیام کوتاه بفرست |
 
 روی ویندوز اول دستورها این را بگذارید:
@@ -274,6 +276,49 @@ YOUTUBE_API_KEY
 
 ---
 
+## اینستاگرام روی کامپیوتر خودت اجرا می‌شود
+
+سایت‌هایی که اطلاعات اینستاگرام را از آن‌ها می‌گیریم، آی‌پی سرورهای گیت‌هاب را بلاک می‌کنند (خطای ۴۰۳). خودِ اینستاگرام هم بدون اکانت جواب نمی‌دهد. ولی از اینترنت خانگی شما هر دو درست کار می‌کنند.
+
+برای همین کار بین دو جا تقسیم شده:
+
+- **گیت‌هاب:** یوتیوب، تیک‌تاک، ایکس، گزارش ترند و ترکیب‌ها — همیشه، حتی وقتی کامپیوتر خاموش است
+- **کامپیوتر شما:** فقط اینستاگرام، هر نیم ساعت — وقتی کامپیوتر روشن و به اینترنت وصل است
+
+روی ویندوز یک کار زمان‌بندی‌شده با این اسم ساخته شده:
+
+```
+MemeBot-Instagram
+```
+
+هیچ پنجره‌ای باز نمی‌شود و گزارش هر اجرا در این فایل نوشته می‌شود:
+
+```
+local-run.log
+```
+
+برای دیدن وضعیتش در پاورشل:
+
+```bash
+Get-ScheduledTaskInfo -TaskName "MemeBot-Instagram"
+```
+
+عدد `LastTaskResult` اگر `0` باشد یعنی اجرای آخر بدون خطا بوده.
+
+برای حذف این کار زمان‌بندی‌شده:
+
+```bash
+Unregister-ScheduledTask -TaskName "MemeBot-Instagram" -Confirm:$false
+```
+
+و برای ساختن دوباره‌اش:
+
+```bash
+$a = New-ScheduledTaskAction -Execute "C:\Users\mhmdn\Desktop\youtube\venv\Scripts\pythonw.exe" -Argument '"C:\Users\mhmdn\Desktop\youtube\main.py" --only instagram --no-combos --state state-local.json' -WorkingDirectory "C:\Users\mhmdn\Desktop\youtube"; $t = New-ScheduledTaskTrigger -Once -At (Get-Date) -RepetitionInterval (New-TimeSpan -Minutes 30); Register-ScheduledTask -TaskName "MemeBot-Instagram" -Action $a -Trigger $t -Force
+```
+
+اجرای محلی فهرست جداگانه‌ی خودش را در `state-local.json` نگه می‌دارد، برای همین با نسخه‌ی گیت‌هاب قاطی نمی‌شود و پست تکراری نمی‌گیرید.
+
 ## اگر چیزی کار نکرد
 
 راه‌های گرفتن اطلاعات از اینستاگرام، تیک‌تاک و ایکس غیررسمی‌اند، چون این سه برنامه راه رسمیِ رایگان ندارند. ممکن است یک روز عوض شوند یا موقتاً از کار بیفتند.
@@ -309,7 +354,7 @@ schtasks /Delete /TN "MemeBot" /F
 | برنامه | پست‌های تازه | گزارش ترند |
 |---|---|---|
 | یوتیوب | خوراک رسمی خود یوتیوب | کانال‌های شما، یا با کلید گوگل کل یوتیوب |
-| اینستاگرام | سایت imginn.com و در صورت خرابی، سایت خود اینستاگرام | پیج‌های شما |
+| اینستاگرام | سایت‌های imginn و imgsed، و در صورت خرابی خود اینستاگرام (فقط روی کامپیوتر خودتان) | پیج‌های شما |
 | تیک‌تاک | برنامه‌ی yt-dlp | سایت tikwm.com |
 | ایکس | سرویس عمومی FxTwitter | همان سرویس |
 

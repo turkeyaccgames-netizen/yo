@@ -270,8 +270,21 @@ def track_failures(results: dict, errors: dict, state: dict, tg: Telegram):
             state["failures"][platform] = 0
 
 
+def setup_output():
+    """The scheduled task runs pythonw.exe, which gives the process no console at all."""
+    if sys.stdout is None or sys.stderr is None:
+        log = ROOT / "local-run.log"
+        if log.exists() and log.stat().st_size > 1_000_000:
+            log.write_text("", encoding="utf-8")
+        stream = open(log, "a", encoding="utf-8", buffering=1)
+        sys.stdout = sys.stderr = stream
+        print(f"\n===== {time.strftime('%Y-%m-%d %H:%M')} =====")
+    else:
+        sys.stdout.reconfigure(encoding="utf-8")
+
+
 def main():
-    sys.stdout.reconfigure(encoding="utf-8")
+    setup_output()
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("--dry-run", action="store_true", help="print messages instead of sending them; state is not saved")
     parser.add_argument("--trends", action="store_true", help="send the trend digest now, regardless of schedule")

@@ -1,6 +1,7 @@
 .env*
 !.env.example
 state-local.json
+local-run.log
 __pycache__/
 *.pyc
 venv/
