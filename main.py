@@ -91,6 +91,13 @@ def send_new_posts(results: dict, cfg: dict, state: dict, tg: Telegram) -> int:
         for account, posts in accounts.items():
             account_key = f"{platform}:{account.lower()}"
             fresh = sorted((p for p in posts if p.key not in state["seen"]), key=lambda p: p.timestamp or 0)
+            if not cfg[platform].get("new_posts", True):
+                # This platform only feeds the trend digest and the combos (X, by default).
+                for p in fresh:
+                    state["seen"][p.key] = int(now)
+                if account_key not in state["initialized"]:
+                    state["initialized"].append(account_key)
+                continue
             if account_key not in state["initialized"]:
                 # First time we see this account: remember its current posts without sending them.
                 state["initialized"].append(account_key)
@@ -255,6 +262,10 @@ def send_combos(results: dict, cfg: dict, state: dict, tg: Telegram):
 
 def track_failures(results: dict, errors: dict, state: dict, tg: Telegram):
     state.setdefault("last_error", {})
+    for platform in list(state["failures"]):
+        if platform not in errors:  # not collected in this run, so its old counter means nothing
+            state["failures"].pop(platform, None)
+            state["last_error"].pop(platform, None)
     for platform, errs in errors.items():
         # Kept in state.json so a failure on the GitHub servers can be diagnosed later.
         state["last_error"][platform] = errs[0][:500] if errs else ""
