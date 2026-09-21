@@ -34,22 +34,22 @@ def load_env(path: Path):
             os.environ.setdefault(key.strip(), value.strip().strip("\"'"))
 
 
-def load_state() -> dict:
+def load_state(path: Path) -> dict:
     state = {"seen": {}, "trend_sent": {}, "initialized": [], "yt_ids": {}, "failures": {}, "last_trends": 0}
-    if STATE_FILE.exists():
-        state.update(json.loads(STATE_FILE.read_text(encoding="utf-8")))
+    if path.exists():
+        state.update(json.loads(path.read_text(encoding="utf-8")))
     return state
 
 
-def save_state(state: dict):
+def save_state(state: dict, path: Path):
     now = time.time()
     state["seen"] = {k: t for k, t in state["seen"].items() if now - t < 30 * 86400}
     state["trend_sent"] = {k: t for k, t in state["trend_sent"].items() if now - t < 7 * 86400}
     state["combo_sent"] = {k: t for k, t in state.get("combo_sent", {}).items() if now - t < 7 * 86400}
-    STATE_FILE.write_text(json.dumps(state, indent=1, ensure_ascii=False, sort_keys=True), encoding="utf-8")
+    path.write_text(json.dumps(state, indent=1, ensure_ascii=False, sort_keys=True), encoding="utf-8")
 
 
-def collect(cfg: dict, state: dict):
+def collect(cfg: dict, state: dict, platforms: list[str] | None = None):
     """Fetch recent posts for every configured account. Returns ({platform: {account: posts}}, {platform: [errors]})."""
     jobs = {
         "youtube": (cfg["youtube"]["channels"],
@@ -59,6 +59,8 @@ def collect(cfg: dict, state: dict):
         "tiktok": (cfg["tiktok"]["accounts"], tiktok.fetch_account, 3),
         "x": (cfg["x"]["accounts"], x.fetch_account, 4),
     }
+    if platforms is not None:
+        jobs = {name: job for name, job in jobs.items() if name in platforms}
     results, errors = {}, {}
     for platform, (accounts, fetch, workers) in jobs.items():
         results[platform], errors[platform] = {}, []
@@ -119,17 +121,18 @@ def send_trends(results: dict, cfg: dict, state: dict, tg: Telegram):
         return [p for posts in results.get(platform, {}).values() for p in posts
                 if p.timestamp and now - p.timestamp <= t["window_hours"] * 3600]
 
-    candidates = {platform: recent(platform) for platform in ("youtube", "instagram", "tiktok", "x")}
+    candidates = {platform: recent(platform) for platform in results}
     api_key = os.environ.get("YOUTUBE_API_KEY")
-    if api_key:
+    if api_key and "youtube" in results:
         try:
             candidates["youtube"] = youtube.fetch_trending_api(api_key, t["youtube_query"], t["youtube_region"], t["window_hours"])
         except Exception as e:
             print(f"[youtube] trending API failed, using watched channels: {e}")
-    try:
-        candidates["tiktok"] += tiktok.fetch_trending(t["tiktok_region"])
-    except Exception as e:
-        print(f"[tiktok] trending feed failed: {e}")
+    if "tiktok" in results:
+        try:
+            candidates["tiktok"] += tiktok.fetch_trending(t["tiktok_region"])
+        except Exception as e:
+            print(f"[tiktok] trending feed failed: {e}")
 
     fcfg = cfg["filters"]
     for platform, posts in candidates.items():
@@ -146,7 +149,7 @@ def send_trends(results: dict, cfg: dict, state: dict, tg: Telegram):
                 top.append(p)
                 per_author[p.author.lower()] = per_author.get(p.author.lower(), 0) + 1
         topics = []
-        if platform == "x":
+        if platform == "x" and "x" in results:
             try:
                 topics = x.fetch_trend_topics(t["x_topics"])
                 if fcfg.get("skip_serious", True):
@@ -227,6 +230,8 @@ def send_combos(results: dict, cfg: dict, state: dict, tg: Telegram):
 
     hot = set()
     try:
+        if "x" not in results:
+            raise RuntimeError("X در این اجرا جمع‌آوری نشده")
         hot = {name.lstrip("#").lower() for name, _, _ in x.fetch_trend_topics(15)}
     except Exception as e:
         print(f"[combos] گرفتن موضوعات ترند نشد: {e}")
@@ -274,6 +279,11 @@ def main():
     parser.add_argument("--sample", action="store_true", help="send the latest post from each platform to test the bot")
     parser.add_argument("--chat-id", action="store_true", help="list chats that have messaged the bot")
     parser.add_argument("--ping", action="store_true", help="send a single test message (fast connection check)")
+    parser.add_argument("--only", default="", help="check only these platforms, comma separated (youtube,instagram,tiktok,x)")
+    parser.add_argument("--skip", default="", help="check every platform except these, comma separated")
+    parser.add_argument("--state", default="state.json", help="state file to use (a local run keeps its own)")
+    parser.add_argument("--no-trends", action="store_true", help="never send the trend digest in this run")
+    parser.add_argument("--no-combos", action="store_true", help="never send combo suggestions in this run")
     args = parser.parse_args()
 
     load_env(ROOT / ".env")
@@ -294,8 +304,11 @@ def main():
         return
 
     cfg = tomllib.loads((ROOT / "config.toml").read_text(encoding="utf-8"))
-    state = load_state()
-    results, errors = collect(cfg, state)
+    state_file = Path(args.state) if Path(args.state).is_absolute() else ROOT / args.state
+    state = load_state(state_file)
+    chosen = [p.strip() for p in args.only.split(",") if p.strip()] or list(PLATFORM_LABELS)
+    chosen = [p for p in chosen if p not in {s.strip() for s in args.skip.split(",")}]
+    results, errors = collect(cfg, state, chosen)
 
     if args.sample:
         for platform, accounts in results.items():
@@ -306,22 +319,22 @@ def main():
         return
 
     if not state["initialized"]:
-        counts = " · ".join(f"{PLATFORM_LABELS[p]}: {len(cfg[p]['channels' if p == 'youtube' else 'accounts'])}" for p in PLATFORM_LABELS)
+        counts = " · ".join(f"{PLATFORM_LABELS[p]}: {len(cfg[p]['channels' if p == 'youtube' else 'accounts'])}" for p in chosen)
         tg.send_text(f"✅ <b>ربات میم فعال شد</b>\n\nاکانت‌های زیرنظر: {counts}\n"
                      f"از این به بعد پست‌های جدید همینجا فرستاده میشه و هر {cfg['settings']['trends_every_hours']} ساعت "
                      f"یک گزارش ترند می‌گیری.")
 
     sent = send_new_posts(results, cfg, state, tg)
     print(f"new posts sent: {sent}")
-    if args.trends or time.time() - state["last_trends"] >= cfg["settings"]["trends_every_hours"] * 3600 - 600:
+    if not args.no_trends and (args.trends or time.time() - state["last_trends"] >= cfg["settings"]["trends_every_hours"] * 3600 - 600):
         send_trends(results, cfg, state, tg)
     combo_cfg = cfg.get("combos", {})
-    if combo_cfg.get("enabled", True) and (
+    if not args.no_combos and combo_cfg.get("enabled", True) and (
             args.combos or time.time() - state.get("last_combos", 0) >= combo_cfg.get("every_hours", 3) * 3600 - 600):
         send_combos(results, cfg, state, tg)
     track_failures(results, errors, state, tg)
     if not args.dry_run:
-        save_state(state)
+        save_state(state, state_file)
 
 
 if __name__ == "__main__":

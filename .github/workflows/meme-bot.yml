@@ -40,7 +40,8 @@ jobs:
           TELEGRAM_BOT_TOKEN: ${{ secrets.TELEGRAM_BOT_TOKEN }}
           TELEGRAM_CHAT_ID: ${{ secrets.TELEGRAM_CHAT_ID }}
           YOUTUBE_API_KEY: ${{ secrets.YOUTUBE_API_KEY }}
-        run: python main.py ${{ inputs.trends && '--trends' || '' }}
+        # Instagram's mirrors block datacenter IPs, so that one runs on the owner's PC instead.
+        run: python main.py --skip instagram ${{ inputs.trends && '--trends' || '' }}
 
       - name: Save state
         if: always()
