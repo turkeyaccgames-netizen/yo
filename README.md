@@ -301,6 +301,12 @@ MemeBot-Instagram
 local-run.log
 ```
 
+برای دیدن چند خط آخرش در پاورشل (بدون `-Encoding UTF8` فارسی‌اش به‌هم‌ریخته نشان داده می‌شود):
+
+```bash
+Get-Content C:\Users\mhmdn\Desktop\youtube\local-run.log -Tail 20 -Encoding UTF8
+```
+
 برای دیدن وضعیتش در پاورشل:
 
 ```bash
