@@ -20,10 +20,10 @@
   "x:2101836200134771085+youtube:1BkdKeQkd3Y": 1789953303
  },
  "failures": {
-  "instagram": 39,
+  "instagram": 40,
   "tiktok": 0,
   "x": 0,
-  "youtube": 5
+  "youtube": 6
  },
  "initialized": [
   "youtube:ucdc0an4zpnr_yifiyovbwaw",
@@ -63,7 +63,7 @@
  "last_combos": 1789964220,
  "last_error": {
   "instagram": "9gag: imginn.com: HTTP 403 for https://imginn.com/9gag/ | imgsed.com: HTTP 403 for https://imgsed.com/9gag/ | instagram.com: HTTP 401 for https://i.instagram.com/api/v1/users/web_profile_info/",
-  "tiktok": "ladbible: yt-dlp: ERROR: [tiktok:user] ladbible: Unable to extract secondary user ID. If you are able to get the channel_id from a video posted by this user, try using \"tiktokuser:channel_id\" as the input URL (replacin",
+  "tiktok": "",
   "x": "",
   "youtube": "UCIjMIhAKynZMG2DafgPm6uQ: HTTP 404 for https://www.youtube.com/feeds/videos.xml"
  },
@@ -584,6 +584,7 @@
   "x:2101885630913638453": 1789964186,
   "x:2101886385909346611": 1789964186,
   "x:2101886725094089117": 1789964186,
+  "x:2101889981333549417": 1789965871,
   "youtube:-G3sFkZB9Rs": 1789898763,
   "youtube:0Dn-pf0rpXw": 1789897455,
   "youtube:1BkdKeQkd3Y": 1789942448,
