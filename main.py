@@ -221,7 +221,8 @@ def send_combos(results: dict, cfg: dict, state: dict, tg: Telegram):
     state.setdefault("combo_sent", {})
 
     sent = 0
-    for combo in combos.find_pairs(tweets, clips, ccfg, is_funny=funny):
+    for combo in combos.find_pairs(tweets, clips, ccfg, is_funny=funny,
+                                   require_funny=ccfg.get("funny_only", True)):
         if sent >= ccfg.get("pairs_per_run", 3):
             break
         key = f"{combo['tweet'].key}+{combo['video'].key}"

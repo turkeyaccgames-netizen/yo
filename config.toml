@@ -63,10 +63,10 @@ new_posts = false
 # توییت‌های پربازدید این اکانت‌ها در بخش ترند X فرستاده میشن
 accounts = [
     "9GAG",
-    "PopBase",
-    "DailyLoud",
+    "dadsaysjokes",
+    "TheFigen_",
+    "NoContextHumans",
     "CrazyClips_",
-    "Dexerto",
     "barstoolsports",
     "LADbible",
     "pubity",
@@ -92,6 +92,8 @@ x_topics = 10
 enabled = true
 # هر چند ساعت یکبار
 every_hours = 3
+# فقط ترکیب‌هایی که هر دو طرفش خنده‌دار باشن فرستاده بشن
+funny_only = true
 # چند تا جفت «متن + کلیپ» در هر بار
 pairs_per_run = 3
 # چند تا بسته‌ی هم‌موضوع در هر بار

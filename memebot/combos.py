@@ -49,6 +49,15 @@ NOT_NAMES = {"the", "this", "that", "when", "what", "why", "how", "who", "his", 
              "monday", "tuesday", "wednesday", "thursday", "friday", "saturday", "sunday",
              "january", "february", "march", "april", "may", "june", "july", "august", "september",
              "october", "november", "december", "christmas", "halloween", "internet", "online"}
+# Lines that read like a news headline: never the funny part of a meme.
+NEWSY = ("confirms", "confirmed", "announces", "announced", "announcement", "reportedly",
+         "according to", "reveals", "revealed", "reports", "sources say", "officially",
+         "statement", "final score", "signs with", "box office", "premiere", "responds",
+         "speaks out", "addresses the", "expected to", "has been named", "set to release",
+         "will release", "interview", "study finds", "research shows", "data shows")
+# The unmistakable "this is a joke" markers.
+LAUGH = ("😂", "🤣", "💀", "😭", "🤡", "😹", "💔", "🥲", "lol", "lmao", "lmfao")
+
 # A sponsored line is never the funny part.
 AD_MARKERS = ("#ad", "sponsor", "promo code", "use code", "discount code", "casino", "roobet",
               "betting", "odds", "link in bio", "swipe up", "available now at", "shop now")
@@ -114,10 +123,14 @@ def caption_quality(post: Post, funny: bool) -> float:
     low = text.lower()
     if not 12 <= len(text) <= 180 or "http" in low or any(m in low for m in AD_MARKERS):
         return 0.0
+    if any(m in low for m in NEWSY):
+        return 0.0  # a headline, not a punchline
     score = 1.0 + (1.5 if funny else 0.0)
     if any(re.search(p, low) for p in CAPTION_PATTERNS):
         score += 2.5
-    if EMOJI_RE.search(text):
+    if any(m in low for m in LAUGH):
+        score += 1.5
+    elif EMOJI_RE.search(text):
         score += 0.5
     if len(text) <= 90:
         score += 0.5
@@ -128,13 +141,23 @@ def caption_quality(post: Post, funny: bool) -> float:
     return max(score, 0.0)
 
 
-def find_pairs(tweets: list[Post], videos: list[Post], cfg: dict, is_funny=lambda p: False) -> list[dict]:
+def _is_meme_shaped(post: Post) -> bool:
+    low = " ".join((post.text or "").split()).lower()
+    return any(re.search(pattern, low) for pattern in CAPTION_PATTERNS) or any(m in low for m in LAUGH)
+
+
+def find_pairs(tweets: list[Post], videos: list[Post], cfg: dict, is_funny=lambda p: False,
+               require_funny: bool = True) -> list[dict]:
     """Pairs a caption-shaped tweet with a funny clip. Same topic scores higher, but is not required."""
     bags = {p.key: bag_of(p.text) for p in tweets + videos}
     weights = topic_weights(list(bags.values()))
     captions = [(p, caption_quality(p, is_funny(p))) for p in tweets]
     captions = [(p, q) for p, q in captions if q >= cfg.get("min_caption_quality", 2.5)]
     clips = [p for p in videos if p.popularity >= cfg.get("min_video_views", 5000)]
+    if require_funny:
+        # Both halves have to be funny on their own, or the combination will not be either.
+        captions = [(p, q) for p, q in captions if is_funny(p) or _is_meme_shaped(p)]
+        clips = [p for p in clips if is_funny(p) or _is_meme_shaped(p)]
     scored = []
     for tweet, quality in captions:
         for video in clips:
@@ -146,6 +169,7 @@ def find_pairs(tweets: list[Post], videos: list[Post], cfg: dict, is_funny=lambd
             shared = sorted(a.topics & b.topics)
             score = quality + math.log10(max(video.popularity, 10))
             score += 1.0 if is_funny(video) else 0.0
+            score += 1.0 if _is_meme_shaped(video) else 0.0
             score += sum(weights.get(t, 1.0) for t in shared)  # same topic: a real bonus, when it happens
             scored.append({"score": score, "shared": shared, "tweet": tweet, "video": video})
     scored.sort(key=lambda c: c["score"], reverse=True)
