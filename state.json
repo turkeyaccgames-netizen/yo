@@ -20,10 +20,10 @@
   "x:2101836200134771085+youtube:1BkdKeQkd3Y": 1789953303
  },
  "failures": {
-  "instagram": 35,
+  "instagram": 36,
   "tiktok": 0,
   "x": 0,
-  "youtube": 1
+  "youtube": 2
  },
  "initialized": [
   "youtube:ucdc0an4zpnr_yifiyovbwaw",
@@ -559,6 +559,8 @@
   "x:2101855942048362595": 1789956944,
   "x:2101856488461324795": 1789956944,
   "x:2101857795960180868": 1789956944,
+  "x:2101862301913506282": 1789958609,
+  "x:2101864248024400284": 1789958609,
   "youtube:-G3sFkZB9Rs": 1789898763,
   "youtube:0Dn-pf0rpXw": 1789897455,
   "youtube:1BkdKeQkd3Y": 1789942448,
