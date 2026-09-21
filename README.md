@@ -231,6 +231,8 @@ config.toml
 
 اگر ویدیو دانلود نشد یا از ۴۵ مگابایت بزرگ‌تر بود، همان پیام با عکس پیش‌نمایش و لینک می‌آید.
 
+کلیپ‌ها از تیک‌تاک، اینستاگرام و شورت‌های یوتیوب می‌آیند و در هر نوبت از هر پلتفرم یکی فرستاده می‌شود تا هر سه سهم داشته باشند.
+
 متن‌ها از بین توییت‌ها انتخاب می‌شوند، ولی نه هر توییتی: فقط جمله‌هایی که شکل کپشن میم دارند. یعنی کوتاه‌اند، لینک و تبلیغ ندارند، و با الگوهایی مثل «when…» یا «how it feels…» شروع می‌شوند. کلیپ‌ها هم از بین ویدیوهای پربازدید همان چند ساعت انتخاب می‌شوند.
 
 اگر متن و کلیپ موضوعشان هم یکی باشد، آن ترکیب امتیاز بیشتری می‌گیرد و اول فرستاده می‌شود.
@@ -282,8 +284,10 @@ YOUTUBE_API_KEY
 
 برای همین کار بین دو جا تقسیم شده:
 
-- **گیت‌هاب:** یوتیوب، تیک‌تاک، ایکس، گزارش ترند و ترکیب‌ها — همیشه، حتی وقتی کامپیوتر خاموش است
-- **کامپیوتر شما:** فقط اینستاگرام، هر نیم ساعت — وقتی کامپیوتر روشن و به اینترنت وصل است
+- **گیت‌هاب:** پست‌های تازه‌ی یوتیوب و تیک‌تاک، و گزارش ترند — همیشه، حتی وقتی کامپیوتر خاموش است
+- **کامپیوتر شما:** پست‌های تازه‌ی اینستاگرام و **ترکیب‌های پیشنهادی**، هر نیم ساعت — وقتی کامپیوتر روشن است
+
+ترکیب‌ها هم روی کامپیوتر شما ساخته می‌شوند، چون فقط آنجا هر چهار پلتفرم در دسترس‌اند و کلیپ اینستاگرام هم می‌تواند وارد ترکیب شود.
 
 روی ویندوز یک کار زمان‌بندی‌شده با این اسم ساخته شده:
 
@@ -314,7 +318,7 @@ Unregister-ScheduledTask -TaskName "MemeBot-Instagram" -Confirm:$false
 و برای ساختن دوباره‌اش:
 
 ```bash
-$a = New-ScheduledTaskAction -Execute "C:\Users\mhmdn\Desktop\youtube\venv\Scripts\pythonw.exe" -Argument '"C:\Users\mhmdn\Desktop\youtube\main.py" --only instagram --no-combos --state state-local.json' -WorkingDirectory "C:\Users\mhmdn\Desktop\youtube"; $t = New-ScheduledTaskTrigger -Once -At (Get-Date) -RepetitionInterval (New-TimeSpan -Minutes 30); Register-ScheduledTask -TaskName "MemeBot-Instagram" -Action $a -Trigger $t -Force
+$a = New-ScheduledTaskAction -Execute "C:\Users\mhmdn\Desktop\youtube\venv\Scripts\pythonw.exe" -Argument '"C:\Users\mhmdn\Desktop\youtube\main.py" --only instagram,tiktok,youtube,x --uploads instagram --trend-platforms instagram --state state-local.json' -WorkingDirectory "C:\Users\mhmdn\Desktop\youtube"; $t = New-ScheduledTaskTrigger -Once -At (Get-Date) -RepetitionInterval (New-TimeSpan -Minutes 30); Register-ScheduledTask -TaskName "MemeBot-Instagram" -Action $a -Trigger $t -Force
 ```
 
 اجرای محلی فهرست جداگانه‌ی خودش را در `state-local.json` نگه می‌دارد، برای همین با نسخه‌ی گیت‌هاب قاطی نمی‌شود و پست تکراری نمی‌گیرید.
