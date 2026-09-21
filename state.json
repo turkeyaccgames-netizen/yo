@@ -20,10 +20,10 @@
   "x:2101836200134771085+youtube:1BkdKeQkd3Y": 1789953303
  },
  "failures": {
-  "instagram": 34,
+  "instagram": 35,
   "tiktok": 0,
   "x": 0,
-  "youtube": 0
+  "youtube": 1
  },
  "initialized": [
   "youtube:ucdc0an4zpnr_yifiyovbwaw",
@@ -65,7 +65,7 @@
   "instagram": "9gag: imginn.com: HTTP 403 for https://imginn.com/9gag/ | imgsed.com: HTTP 403 for https://imgsed.com/9gag/ | instagram.com: HTTP 401 for https://i.instagram.com/api/v1/users/web_profile_info/",
   "tiktok": "",
   "x": "",
-  "youtube": ""
+  "youtube": "UCIjMIhAKynZMG2DafgPm6uQ: HTTP 404 for https://www.youtube.com/feeds/videos.xml"
  },
  "last_trends": 1789953299,
  "seen": {
@@ -190,6 +190,7 @@
   "tiktok:7687743625882635533": 1789942448,
   "tiktok:7687774773962755341": 1789950130,
   "tiktok:7687790139434667277": 1789953287,
+  "tiktok:7687805958331829517": 1789956944,
   "x:2037602737139966252": 1789898763,
   "x:2039075794773823966": 1789898763,
   "x:2042324603226194123": 1789898763,
@@ -553,6 +554,11 @@
   "x:2101838824145915996": 1789953287,
   "x:2101846374027280630": 1789954997,
   "x:2101849517960343630": 1789954997,
+  "x:2101853300379287924": 1789956944,
+  "x:2101855654747025781": 1789956944,
+  "x:2101855942048362595": 1789956944,
+  "x:2101856488461324795": 1789956944,
+  "x:2101857795960180868": 1789956944,
   "youtube:-G3sFkZB9Rs": 1789898763,
   "youtube:0Dn-pf0rpXw": 1789897455,
   "youtube:1BkdKeQkd3Y": 1789942448,
