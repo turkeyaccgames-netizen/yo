@@ -182,7 +182,18 @@ def find_pairs(tweets: list[Post], videos: list[Post], cfg: dict, is_funny=lambd
         used_videos.add(combo["video"].key)
         used_authors[author] = used_authors.get(author, 0) + 1
         pairs.append(combo)
-    return pairs
+
+    # Interleave the platforms so one run does not hand over three TikToks and nothing else.
+    by_platform: dict[str, list] = {}
+    for combo in pairs:
+        by_platform.setdefault(combo["video"].platform, []).append(combo)
+    order = sorted(by_platform, key=lambda p: -by_platform[p][0]["score"])
+    interleaved = []
+    while any(by_platform.values()):
+        for platform in order:
+            if by_platform[platform]:
+                interleaved.append(by_platform[platform].pop(0))
+    return interleaved
 
 
 def find_packs(posts: list[Post], cfg: dict, hot_topics: set[str] | None = None) -> list[dict]:

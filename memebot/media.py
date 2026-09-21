@@ -1,9 +1,22 @@
 """Downloads a clip so the bot can hand over the actual file, not just a link."""
+import shutil
 import tempfile
 from pathlib import Path
 
 from yt_dlp import YoutubeDL
 from yt_dlp.networking.impersonate import ImpersonateTarget
+
+
+def _ffmpeg_location() -> str | None:
+    """Prefer a system ffmpeg (GitHub runners have one); fall back to the pip-installed binary."""
+    if shutil.which("ffmpeg"):
+        return None
+    try:
+        import imageio_ffmpeg
+
+        return imageio_ffmpeg.get_ffmpeg_exe()
+    except Exception:
+        return None
 
 
 def download_video(url: str, max_mb: int = 45) -> Path | None:
@@ -22,6 +35,9 @@ def download_video(url: str, max_mb: int = 45) -> Path | None:
         "retries": 2,
         "impersonate": ImpersonateTarget.from_str("chrome"),
     }
+    ffmpeg = _ffmpeg_location()
+    if ffmpeg:
+        opts["ffmpeg_location"] = ffmpeg
     try:
         with YoutubeDL(opts) as ydl:
             ydl.extract_info(url, download=True)

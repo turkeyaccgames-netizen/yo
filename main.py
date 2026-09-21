@@ -82,7 +82,7 @@ def collect(cfg: dict, state: dict, platforms: list[str] | None = None):
     return results, errors
 
 
-def send_new_posts(results: dict, cfg: dict, state: dict, tg: Telegram) -> int:
+def send_new_posts(results: dict, cfg: dict, state: dict, tg: Telegram, allowed: set[str] | None = None) -> int:
     settings = cfg["settings"]
     max_age = settings["max_post_age_hours"] * 3600
     now = time.time()
@@ -91,7 +91,7 @@ def send_new_posts(results: dict, cfg: dict, state: dict, tg: Telegram) -> int:
         for account, posts in accounts.items():
             account_key = f"{platform}:{account.lower()}"
             fresh = sorted((p for p in posts if p.key not in state["seen"]), key=lambda p: p.timestamp or 0)
-            if not cfg[platform].get("new_posts", True):
+            if not cfg[platform].get("new_posts", True) or (allowed is not None and platform not in allowed):
                 # This platform only feeds the trend digest and the combos (X, by default).
                 for p in fresh:
                     state["seen"][p.key] = int(now)
@@ -120,22 +120,23 @@ def send_new_posts(results: dict, cfg: dict, state: dict, tg: Telegram) -> int:
     return sent
 
 
-def send_trends(results: dict, cfg: dict, state: dict, tg: Telegram):
+def send_trends(results: dict, cfg: dict, state: dict, tg: Telegram, allowed: set[str] | None = None):
     t = cfg["trends"]
     now = time.time()
+    wanted = [p for p in results if allowed is None or p in allowed]
 
     def recent(platform):
         return [p for posts in results.get(platform, {}).values() for p in posts
                 if p.timestamp and now - p.timestamp <= t["window_hours"] * 3600]
 
-    candidates = {platform: recent(platform) for platform in results}
+    candidates = {platform: recent(platform) for platform in wanted}
     api_key = os.environ.get("YOUTUBE_API_KEY")
-    if api_key and "youtube" in results:
+    if api_key and "youtube" in wanted:
         try:
             candidates["youtube"] = youtube.fetch_trending_api(api_key, t["youtube_query"], t["youtube_region"], t["window_hours"])
         except Exception as e:
             print(f"[youtube] trending API failed, using watched channels: {e}")
-    if "tiktok" in results:
+    if "tiktok" in wanted:
         try:
             candidates["tiktok"] += tiktok.fetch_trending(t["tiktok_region"])
         except Exception as e:
@@ -156,7 +157,7 @@ def send_trends(results: dict, cfg: dict, state: dict, tg: Telegram):
                 top.append(p)
                 per_author[p.author.lower()] = per_author.get(p.author.lower(), 0) + 1
         topics = []
-        if platform == "x" and "x" in results:
+        if platform == "x" and "x" in wanted:
             try:
                 topics = x.fetch_trend_topics(t["x_topics"])
                 if fcfg.get("skip_serious", True):
@@ -307,6 +308,8 @@ def main():
     parser.add_argument("--only", default="", help="check only these platforms, comma separated (youtube,instagram,tiktok,x)")
     parser.add_argument("--skip", default="", help="check every platform except these, comma separated")
     parser.add_argument("--state", default="state.json", help="state file to use (a local run keeps its own)")
+    parser.add_argument("--uploads", default="", help="only these platforms may send new-post messages (others are still collected for combos)")
+    parser.add_argument("--trend-platforms", default="", help="only these platforms may appear in the trend digest")
     parser.add_argument("--no-trends", action="store_true", help="never send the trend digest in this run")
     parser.add_argument("--no-combos", action="store_true", help="never send combo suggestions in this run")
     args = parser.parse_args()
@@ -349,10 +352,12 @@ def main():
                      f"از این به بعد پست‌های جدید همینجا فرستاده میشه و هر {cfg['settings']['trends_every_hours']} ساعت "
                      f"یک گزارش ترند می‌گیری.")
 
-    sent = send_new_posts(results, cfg, state, tg)
+    uploads = {p.strip() for p in args.uploads.split(",") if p.strip()} or None
+    trend_platforms = {p.strip() for p in args.trend_platforms.split(",") if p.strip()} or None
+    sent = send_new_posts(results, cfg, state, tg, uploads)
     print(f"new posts sent: {sent}")
     if not args.no_trends and (args.trends or time.time() - state["last_trends"] >= cfg["settings"]["trends_every_hours"] * 3600 - 600):
-        send_trends(results, cfg, state, tg)
+        send_trends(results, cfg, state, tg, trend_platforms)
     combo_cfg = cfg.get("combos", {})
     if not args.no_combos and combo_cfg.get("enabled", True) and (
             args.combos or time.time() - state.get("last_combos", 0) >= combo_cfg.get("every_hours", 3) * 3600 - 600):

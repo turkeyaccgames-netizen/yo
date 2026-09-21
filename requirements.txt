@@ -1,2 +1,4 @@
 # yt-dlp is intentionally unpinned: TikTok/YouTube extractors need frequent updates.
 yt-dlp[default,curl-cffi]
+# Bundles an ffmpeg binary, needed to join YouTube's separate video and audio streams.
+imageio-ffmpeg
