@@ -174,9 +174,10 @@ def find_pairs(tweets: list[Post], videos: list[Post], cfg: dict, is_funny=lambd
             scored.append({"score": score, "shared": shared, "tweet": tweet, "video": video})
     scored.sort(key=lambda c: c["score"], reverse=True)
     used_tweets, used_videos, used_authors, pairs = set(), set(), {}, []
+    per_author = cfg.get("max_per_author", 2)
     for combo in scored:
         author = combo["video"].author.lower()
-        if combo["tweet"].key in used_tweets or combo["video"].key in used_videos or used_authors.get(author, 0) >= 2:
+        if combo["tweet"].key in used_tweets or combo["video"].key in used_videos or used_authors.get(author, 0) >= per_author:
             continue
         used_tweets.add(combo["tweet"].key)
         used_videos.add(combo["video"].key)
