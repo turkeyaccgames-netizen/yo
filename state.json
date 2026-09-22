@@ -40,7 +40,7 @@
  "failures": {
   "tiktok": 0,
   "x": 0,
-  "youtube": 1
+  "youtube": 2
  },
  "initialized": [
   "youtube:ucdc0an4zpnr_yifiyovbwaw",
@@ -82,7 +82,7 @@
  ],
  "last_combos": 1789996515,
  "last_error": {
-  "tiktok": "barstoolsports: yt-dlp: ERROR: barstoolsports: Unable to download JSON metadata: Failed to perform, curl: (28) Connection timed out after 20002 milliseconds. See https://curl.se/libcurl/c/libcurl-errors.html first for more d",
+  "tiktok": "",
   "x": "",
   "youtube": "UCIjMIhAKynZMG2DafgPm6uQ: HTTP 404 for https://www.youtube.com/feeds/videos.xml"
  },
@@ -891,6 +891,7 @@
   "x:2102246449287221328": 1790050536,
   "x:2102246508829737258": 1790050536,
   "x:2102246760697725240": 1790050536,
+  "x:2102253944235872469": 1790052178,
   "youtube:-G3sFkZB9Rs": 1789898763,
   "youtube:0Dn-pf0rpXw": 1789897455,
   "youtube:1BkdKeQkd3Y": 1789942448,
