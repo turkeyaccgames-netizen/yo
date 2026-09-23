@@ -84,7 +84,7 @@
  "last_error": {
   "tiktok": "",
   "x": "",
-  "youtube": "UCIjMIhAKynZMG2DafgPm6uQ: HTTP 500 for https://www.youtube.com/feeds/videos.xml"
+  "youtube": "UCIjMIhAKynZMG2DafgPm6uQ: HTTP 404 for https://www.youtube.com/feeds/videos.xml"
  },
  "last_trends": 1790126064,
  "seen": {
@@ -1088,6 +1088,7 @@
   "x:2102582335027777920": 1790129738,
   "x:2102583504710123822": 1790131365,
   "x:2102594302710780189": 1790133398,
+  "x:2102604764173287793": 1790135017,
   "youtube:-G3sFkZB9Rs": 1789898763,
   "youtube:0Dn-pf0rpXw": 1789897455,
   "youtube:1BkdKeQkd3Y": 1789942448,
