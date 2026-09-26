@@ -40,7 +40,7 @@
  "failures": {
   "tiktok": 0,
   "x": 0,
-  "youtube": 5
+  "youtube": 6
  },
  "initialized": [
   "youtube:ucdc0an4zpnr_yifiyovbwaw",
@@ -82,7 +82,7 @@
  ],
  "last_combos": 1789996515,
  "last_error": {
-  "tiktok": "memezar: yt-dlp: ERROR: [tiktok:user] memezar: Unable to extract secondary user ID. If you are able to get the channel_id from a video posted by this user, try using \"tiktokuser:channel_id\" as the input URL (replacing",
+  "tiktok": "",
   "x": "",
   "youtube": "UCIjMIhAKynZMG2DafgPm6uQ: HTTP 404 for https://www.youtube.com/feeds/videos.xml"
  },
