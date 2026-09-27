@@ -40,7 +40,7 @@
  "failures": {
   "tiktok": 0,
   "x": 0,
-  "youtube": 8
+  "youtube": 9
  },
  "initialized": [
   "youtube:ucdc0an4zpnr_yifiyovbwaw",
@@ -82,7 +82,7 @@
  ],
  "last_combos": 1789996515,
  "last_error": {
-  "tiktok": "",
+  "tiktok": "memezar: yt-dlp: ERROR: memezar: Unable to download JSON metadata: HTTP Error 500: Internal Server Error (caused by <HTTPError 500: Internal Server Error>)",
   "x": "",
   "youtube": "UCIjMIhAKynZMG2DafgPm6uQ: HTTP 404 for https://www.youtube.com/feeds/videos.xml"
  },
@@ -1952,6 +1952,7 @@
   "x:2104084990132732041": 1790489988,
   "x:2104088647150543057": 1790489988,
   "x:2104088651747446813": 1790489988,
+  "x:2104094507981484470": 1790491651,
   "youtube:-G3sFkZB9Rs": 1789898763,
   "youtube:0Dn-pf0rpXw": 1789897455,
   "youtube:1BkdKeQkd3Y": 1789942448,
