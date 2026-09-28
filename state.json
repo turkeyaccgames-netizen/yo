@@ -22,7 +22,7 @@
  "failures": {
   "tiktok": 0,
   "x": 0,
-  "youtube": 0
+  "youtube": 1
  },
  "initialized": [
   "youtube:ucdc0an4zpnr_yifiyovbwaw",
@@ -66,7 +66,7 @@
  "last_error": {
   "tiktok": "",
   "x": "",
-  "youtube": "UC86suRFnqiw8zN6LIYxddYQ: HTTP 404 for https://www.youtube.com/feeds/videos.xml"
+  "youtube": "UCIjMIhAKynZMG2DafgPm6uQ: HTTP 404 for https://www.youtube.com/feeds/videos.xml"
  },
  "last_trends": 1790558138,
  "seen": {
@@ -2120,6 +2120,11 @@
   "x:2104376104827916576": 1790558136,
   "x:2104376153503060055": 1790558136,
   "x:2104381105386475804": 1790559811,
+  "x:2104386906964308201": 1790561756,
+  "x:2104388322621571545": 1790561756,
+  "x:2104388676541108467": 1790561756,
+  "x:2104390642516521334": 1790561756,
+  "x:2104391644959416449": 1790561756,
   "youtube:-G3sFkZB9Rs": 1789898763,
   "youtube:0Dn-pf0rpXw": 1789897455,
   "youtube:1BkdKeQkd3Y": 1789942448,
