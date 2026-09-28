@@ -58,7 +58,7 @@
  ],
  "last_combos": 1789996515,
  "last_error": {
-  "tiktok": "brentrivera: yt-dlp: ERROR: [tiktok:user] brentrivera: Unable to extract secondary user ID. If you are able to get the channel_id from a video posted by this user, try using \"tiktokuser:channel_id\" as the input URL (repla",
+  "tiktok": "",
   "x": "",
   "youtube": ""
  },
