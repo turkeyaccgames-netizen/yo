@@ -3,7 +3,7 @@
  "failures": {
   "tiktok": 0,
   "x": 0,
-  "youtube": 8
+  "youtube": 9
  },
  "initialized": [
   "youtube:ucdc0an4zpnr_yifiyovbwaw",
@@ -45,7 +45,7 @@
  ],
  "last_combos": 1789996515,
  "last_error": {
-  "tiktok": "9gag: yt-dlp: ERROR: [tiktok:user] 9gag: Unable to extract secondary user ID. If you are able to get the channel_id from a video posted by this user, try using \"tiktokuser:channel_id\" as the input URL (replacing `c",
+  "tiktok": "",
   "x": "",
   "youtube": "UCIjMIhAKynZMG2DafgPm6uQ: HTTP 404 for https://www.youtube.com/feeds/videos.xml"
  },
@@ -448,6 +448,9 @@
   "tiktok:7690803557129374989": 1790655388,
   "tiktok:7690810678508031254": 1790657137,
   "tiktok:7690818442944941334": 1790658936,
+  "tiktok:7690818899901713686": 1790662835,
+  "tiktok:7690824176197700886": 1790662835,
+  "tiktok:7690826132806978838": 1790662835,
   "x:2037602737139966252": 1789898763,
   "x:2039075794773823966": 1789898763,
   "x:2042324603226194123": 1789898763,
@@ -2382,6 +2385,8 @@
   "x:2104790975528767563": 1790657137,
   "x:2104798325413175355": 1790658936,
   "x:2104809275742642611": 1790660726,
+  "x:2104813431907930216": 1790662835,
+  "x:2104816833857486972": 1790662835,
   "youtube:-G3sFkZB9Rs": 1789898763,
   "youtube:-yGMBEMBJoU": 1790626518,
   "youtube:0Dn-pf0rpXw": 1789897455,
