@@ -45,9 +45,9 @@
  ],
  "last_combos": 1789996515,
  "last_error": {
-  "tiktok": "kallmekris: yt-dlp: ERROR: [tiktok:user] kallmekris: Unable to extract secondary user ID. If you are able to get the channel_id from a video posted by this user, try using \"tiktokuser:channel_id\" as the input URL (replac",
+  "tiktok": "",
   "x": "",
-  "youtube": ""
+  "youtube": "UCIjMIhAKynZMG2DafgPm6uQ: HTTP 404 for https://www.youtube.com/feeds/videos.xml"
  },
  "last_trends": 1790817484,
  "seen": {
@@ -2832,6 +2832,13 @@
   "x:2105462745286012963": 1790817482,
   "x:2105464879469797753": 1790817482,
   "x:2105465877395284261": 1790817482,
+  "x:2105467456437297618": 1790819147,
+  "x:2105468319616860569": 1790819147,
+  "x:2105469105520415124": 1790819147,
+  "x:2105469277465698436": 1790819147,
+  "x:2105469584920793426": 1790819147,
+  "x:2105470251769147825": 1790819147,
+  "x:2105473551482687783": 1790819147,
   "youtube:-G3sFkZB9Rs": 1789898763,
   "youtube:-yGMBEMBJoU": 1790626518,
   "youtube:0Dn-pf0rpXw": 1789897455,
