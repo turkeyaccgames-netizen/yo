@@ -45,7 +45,7 @@
  ],
  "last_combos": 1789996515,
  "last_error": {
-  "tiktok": "",
+  "tiktok": "ladbible: yt-dlp: ERROR: ladbible: Unable to download JSON metadata: Failed to perform, curl: (28) Connection timed out after 20002 milliseconds. See https://curl.se/libcurl/c/libcurl-errors.html first for more details",
   "x": "",
   "youtube": ""
  },
@@ -562,6 +562,7 @@
   "tiktok:7692025985469779222": 1790939752,
   "tiktok:7692039197229616416": 1790943621,
   "tiktok:7692059450554846478": 1790948880,
+  "tiktok:7692065757802417430": 1790956114,
   "tiktok:7692066088309230862": 1790948880,
   "tiktok:7692070809606589710": 1790950699,
   "tiktok:7692071016696237334": 1790950699,
@@ -3228,6 +3229,9 @@
   "x:2106036498378199228": 1790954320,
   "x:2106036790931169497": 1790954320,
   "x:2106038713599844422": 1790954320,
+  "x:2106043038157996513": 1790956114,
+  "x:2106043708835549510": 1790956114,
+  "x:2106046895558979700": 1790956114,
   "youtube:-G3sFkZB9Rs": 1789898763,
   "youtube:-yGMBEMBJoU": 1790626518,
   "youtube:0Dn-pf0rpXw": 1789897455,
