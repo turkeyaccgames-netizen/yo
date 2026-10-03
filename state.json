@@ -3,7 +3,7 @@
  "failures": {
   "tiktok": 0,
   "x": 0,
-  "youtube": 0
+  "youtube": 1
  },
  "initialized": [
   "youtube:ucdc0an4zpnr_yifiyovbwaw",
@@ -3328,6 +3328,7 @@
   "x:2106183440085483677": 1790988623,
   "x:2106187477908177048": 1790990139,
   "x:2106187483826225185": 1790990139,
+  "x:2106193684236824924": 1790991894,
   "youtube:-G3sFkZB9Rs": 1789898763,
   "youtube:-yGMBEMBJoU": 1790626518,
   "youtube:0Dn-pf0rpXw": 1789897455,
