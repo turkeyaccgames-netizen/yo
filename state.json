@@ -3,7 +3,7 @@
  "failures": {
   "tiktok": 0,
   "x": 0,
-  "youtube": 0
+  "youtube": 1
  },
  "initialized": [
   "youtube:ucdc0an4zpnr_yifiyovbwaw",
@@ -46,7 +46,7 @@
  "last_combos": 1789996515,
  "last_error": {
   "tiktok": "",
-  "x": "TheFigen_: HTTP 404 for https://api.fxtwitter.com/2/profile/TheFigen_/statuses",
+  "x": "",
   "youtube": "UCIjMIhAKynZMG2DafgPm6uQ: HTTP 404 for https://www.youtube.com/feeds/videos.xml"
  },
  "last_trends": 1791001060,
