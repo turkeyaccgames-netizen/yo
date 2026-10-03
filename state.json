@@ -46,7 +46,7 @@
  "last_combos": 1789996515,
  "last_error": {
   "tiktok": "",
-  "x": "",
+  "x": "TheFigen_: HTTP 404 for https://api.fxtwitter.com/2/profile/TheFigen_/statuses",
   "youtube": "UCIjMIhAKynZMG2DafgPm6uQ: HTTP 404 for https://www.youtube.com/feeds/videos.xml"
  },
  "last_trends": 1791001060,
@@ -3340,6 +3340,8 @@
   "x:2106217683616137302": 1790997770,
   "x:2106232776160637337": 1791001058,
   "x:2106233035859341743": 1791001058,
+  "x:2106247875789230489": 1791004512,
+  "x:2106247876854821223": 1791004512,
   "youtube:-G3sFkZB9Rs": 1789898763,
   "youtube:-yGMBEMBJoU": 1790626518,
   "youtube:0Dn-pf0rpXw": 1789897455,
