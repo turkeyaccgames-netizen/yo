@@ -45,9 +45,9 @@
  ],
  "last_combos": 1789996515,
  "last_error": {
-  "tiktok": "khaby.lame: yt-dlp: ERROR: [tiktok:user] khaby.lame: Unable to extract secondary user ID. If you are able to get the channel_id from a video posted by this user, try using \"tiktokuser:channel_id\" as the input URL (replac",
+  "tiktok": "",
   "x": "",
-  "youtube": "UC86suRFnqiw8zN6LIYxddYQ: HTTP 404 for https://www.youtube.com/feeds/videos.xml"
+  "youtube": "UCIjMIhAKynZMG2DafgPm6uQ: HTTP 404 for https://www.youtube.com/feeds/videos.xml"
  },
  "last_trends": 1791159909,
  "seen": {
@@ -3705,6 +3705,9 @@
   "x:2106910077655359881": 1791161635,
   "x:2106912252829868359": 1791163045,
   "x:2106912259741991122": 1791163045,
+  "x:2106918026952208666": 1791164791,
+  "x:2106919387055677850": 1791164791,
+  "x:2106923690034171979": 1791164791,
   "youtube:-G3sFkZB9Rs": 1789898763,
   "youtube:-yGMBEMBJoU": 1790626518,
   "youtube:0Dn-pf0rpXw": 1789897455,
