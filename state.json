@@ -3,7 +3,7 @@
  "failures": {
   "tiktok": 0,
   "x": 0,
-  "youtube": 1
+  "youtube": 0
  },
  "initialized": [
   "youtube:ucdc0an4zpnr_yifiyovbwaw",
@@ -46,7 +46,7 @@
  "last_combos": 1789996515,
  "last_error": {
   "tiktok": "",
-  "x": "",
+  "x": "CrazyClips_: HTTP 404 for https://api.fxtwitter.com/2/profile/CrazyClips_/statuses",
   "youtube": "UCIjMIhAKynZMG2DafgPm6uQ: HTTP 404 for https://www.youtube.com/feeds/videos.xml"
  },
  "last_trends": 1791344923,
@@ -4187,6 +4187,9 @@
   "x:2107682330642964724": 1791346654,
   "x:2107682565067014585": 1791346654,
   "x:2107683087542825269": 1791346654,
+  "x:2107697431785677098": 1791350300,
+  "x:2107698181513551935": 1791350300,
+  "x:2107699694302318755": 1791350300,
   "youtube:-G3sFkZB9Rs": 1789898763,
   "youtube:-yGMBEMBJoU": 1790626518,
   "youtube:0Dn-pf0rpXw": 1789897455,
