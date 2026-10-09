@@ -46,7 +46,7 @@
  "last_combos": 1789996515,
  "last_error": {
   "tiktok": "",
-  "x": "",
+  "x": "pubity: HTTP 404 for https://api.fxtwitter.com/2/profile/pubity/statuses",
   "youtube": ""
  },
  "last_trends": 1791507517,
@@ -4649,6 +4649,8 @@
   "x:2108362027991208266": 1791508947,
   "x:2108362471362744784": 1791508947,
   "x:2108362745959882866": 1791508947,
+  "x:2108367890881646625": 1791510534,
+  "x:2108373110260916576": 1791510534,
   "youtube:-G3sFkZB9Rs": 1789898763,
   "youtube:-yGMBEMBJoU": 1790626518,
   "youtube:0Dn-pf0rpXw": 1789897455,
