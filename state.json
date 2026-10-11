@@ -46,7 +46,7 @@
  "last_combos": 1789996515,
  "last_error": {
   "tiktok": "",
-  "x": "",
+  "x": "barstoolsports: HTTP 404 for https://api.fxtwitter.com/2/profile/barstoolsports/statuses",
   "youtube": ""
  },
  "last_trends": 1791702265,
@@ -5090,6 +5090,7 @@
   "x:2109163806777643497": 1791699628,
   "x:2109177180814979440": 1791702262,
   "x:2109180580768162237": 1791703036,
+  "x:2109186865144217788": 1791704808,
   "youtube:-G3sFkZB9Rs": 1789898763,
   "youtube:-yGMBEMBJoU": 1790626518,
   "youtube:0Dn-pf0rpXw": 1789897455,
