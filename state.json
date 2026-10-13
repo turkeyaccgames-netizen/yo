@@ -46,7 +46,7 @@
  "last_combos": 1789996515,
  "last_error": {
   "tiktok": "",
-  "x": "",
+  "x": "NoContextHumans: HTTP 404 for https://api.fxtwitter.com/2/profile/NoContextHumans/statuses",
   "youtube": ""
  },
  "last_trends": 1791886780,
@@ -5555,6 +5555,8 @@
   "x:2109964867411357997": 1791890341,
   "x:2109966835923751366": 1791890341,
   "x:2109972713083228591": 1791892212,
+  "x:2109976365743165907": 1791894263,
+  "x:2109982972472393739": 1791894263,
   "youtube:-G3sFkZB9Rs": 1789898763,
   "youtube:-yGMBEMBJoU": 1790626518,
   "youtube:0Dn-pf0rpXw": 1789897455,
