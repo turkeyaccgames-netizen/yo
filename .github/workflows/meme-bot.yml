@@ -35,6 +35,10 @@ jobs:
           ffmpeg -version >/dev/null 2>&1 || sudo apt-get install -y -qq ffmpeg
           pip install -U -r requirements.txt
 
+      - name: Tests
+        # Offline checks only; a broken change stops here instead of misbehaving in the chat.
+        run: python -m unittest discover tests
+
       - name: Run bot
         env:
           TELEGRAM_BOT_TOKEN: ${{ secrets.TELEGRAM_BOT_TOKEN }}

@@ -2,3 +2,9 @@
 yt-dlp[default,curl-cffi]
 # Bundles an ffmpeg binary, needed to join YouTube's separate video and audio streams.
 imageio-ffmpeg
+# Draws the caption band of a finished meme; the other two shape Persian text for it.
+pillow
+arabic-reshaper
+python-bidi
+# Optional AI pairing (only used when ANTHROPIC_API_KEY is set).
+anthropic

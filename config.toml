@@ -74,6 +74,16 @@ accounts = [
     "UNILAD",
 ]
 
+[telegram]
+# کانال‌های عمومی تلگرام (فارسی). فقط اسم کانال، بدون @. کانال خصوصی خوانده نمی‌شود.
+# این سه تا فقط برای شروع‌اند؛ کانال‌های میم و فان مورد علاقه‌ی خودت را جایشان بگذار.
+# اگر این بخش را نمی‌خواهی، فهرست را خالی کن: accounts = []
+accounts = [
+    "gizmiztel",
+    "funhiphop",
+    "kafiha",
+]
+
 [trends]
 # بازه‌ی زمانی برای پیدا کردن پست‌های پربازدید (ساعت)
 window_hours = 24
@@ -104,17 +114,39 @@ packs_per_run = 1
 window_hours = 48
 # حداکثر حجم ویدیویی که در تلگرام فرستاده میشه (مگابایت، سقف تلگرام ۵۰)
 max_video_mb = 45
+# متن روی خود کلیپ نوشته بشه و میم آماده‌ی انتشار بیاد؟ (false = کلیپ خام، برای وقتی که خودت تدوین می‌کنی)
+render_meme = true
+# کلیپ ترکیب‌ها از کدام پلتفرم‌ها برداشته بشه. برای کلیپ کانال‌های تلگرام فارسی، "telegram" را هم اضافه کن
+# (بهتر است فقط وقتی که هوش مصنوعی روشن است، چون متن‌های آماده انگلیسی‌اند)
+clip_platforms = ["tiktok", "instagram", "youtube"]
 # حداقل کیفیت متن برای اینکه به درد کپشن بخوره
 min_caption_quality = 2.5
 # کلیپ حداقل این تعداد بازدید (یا لایک) داشته باشه
 min_video_views = 5000
 # اگر متن توییت و کپشن کلیپ خیلی شبیه هم باشن یعنی یک پست تکراری‌ان
 max_text_similarity = 0.4
-# بسته‌ی هم‌موضوع: حداقل چند پست، از حداقل چند پلتفرم، و حداکثر چند تا در پیام
-pack_min_items = 3
+# بسته‌ی هم‌موضوع: حداقل چند پست (از اکانت‌های مختلف)، از حداقل چند پلتفرم، و حداکثر چند تا در پیام.
+# با ده اکانت در هر پلتفرم، سه پستِ هم‌موضوع تقریباً هیچ‌وقت پیدا نمی‌شد؛ برای همین حداقل دو است
+pack_min_items = 2
 pack_min_platforms = 2
 pack_max_items = 4
 pack_min_weight = 3.0
+
+[ai]
+# انتخاب هوشمند ترکیب‌ها با Claude: تصویر کلیپ را می‌بیند، متن مناسب را انتخاب می‌کند یا خودش می‌نویسد،
+# و متن را به زبان خودت می‌دهد. فقط وقتی کار می‌کند که ANTHROPIC_API_KEY در فایل .env باشد؛
+# بدون کلید، ربات مثل قبل با روش کلمه‌ای کار می‌کند.
+enabled = true
+# مدل. claude-haiku-5-5 ارزان‌ترین است (هر نوبت کمتر از یک سنت). برای کیفیت بالاتر: claude-sonnet-5-5 یا claude-opus-5-5
+model = "claude-haiku-5-5"
+# زبان متنی که روی کلیپ می‌آید: fa فارسی، en انگلیسی، ar عربی، tr ترکی
+caption_language = "fa"
+# ترکیب‌هایی که مدل از ۱۰ کمتر از این نمره بدهد فرستاده نمی‌شوند
+min_score = 6
+# حداکثر تعداد کلیپ، تصویر و متنی که در هر نوبت برای مدل فرستاده می‌شود (بیشتر = گران‌تر)
+max_clips = 14
+max_images = 14
+max_lines = 30
 
 [filters]
 # در گزارش ترند، پست‌های خنده‌دار و باحال اول بیان
@@ -122,26 +154,43 @@ funny_first = true
 # پست‌های خبری و ناراحت‌کننده اصلاً فرستاده نشن (هم در پست‌های جدید، هم در ترندها)
 skip_serious = true
 
-# نشانه‌های پست خنده‌دار یا باحال
+# نشانه‌های روشنِ پست خنده‌دار یا باحال (یکی کافی است)
 funny_keywords = [
     "funny", "funniest", "meme", "memes", "lol", "lmao", "lmfao", "comedy", "comedian",
     "joke", "jokes", "hilarious", "humor", "humour", "laugh", "laughing", "prank", "pranks",
     "fail", "fails", "silly", "goofy", "dumb", "cursed", "relatable", "pov", "wait for it",
-    "gone wrong", "caught on camera", "satisfying", "insane", "crazy", "epic", "wholesome",
-    "cute", "adorable", "cat", "cats", "kitten", "dog", "dogs", "puppy", "magic", "trick",
-    "skills", "unbelievable", "mind blowing", "no way", "bro", "😂", "🤣", "💀", "😭", "🤡",
-    "😹", "🙃", "😅", "🔥", "🤯", "😳", "🤪", "#funny", "#meme", "#memes", "#comedy", "#fail",
+    "gone wrong", "caught on camera", "kitten", "puppy", "mind blowing",
+    "😂", "🤣", "💀", "😭", "🤡", "😹", "🤪", "#funny", "#meme", "#memes", "#comedy", "#fail",
+    "خنده", "خندیدم", "خنده‌دار", "ترکیدم", "مردم از خنده", "میم", "طنز", "شوخی", "جوک", "سوتی",
 ]
 
-# نشانه‌های پست خبری، سیاسی یا ناراحت‌کننده
+# نشانه‌های ضعیف: تنها که باشند چیزی نمی‌گویند، دو تا با هم یعنی احتمالاً باحال است
+weak_funny_keywords = [
+    "satisfying", "insane", "crazy", "epic", "wholesome", "cute", "adorable", "cat", "cats",
+    "dog", "dogs", "magic", "trick", "skills", "unbelievable", "no way", "bro",
+    "🙃", "😅", "🔥", "🤯", "😳", "باحال", "عجیب", "جالب", "خفن",
+]
+
+# نشانه‌های پست خبری، سیاسی یا ناراحت‌کننده (همیشه حذف می‌شود)
 blocked_keywords = [
-    "died", "dies", "dead", "death", "killed", "kills", "murder", "murdered", "shooting",
+    "death", "murder", "murdered", "shooting",
     "shot dead", "stabbed", "war", "airstrike", "bombing", "hostage", "terror", "terrorist",
     "israel", "gaza", "hamas", "ukraine", "russia", "putin", "trump", "biden", "election",
-    "senate", "congress", "president", "politics", "political", "court", "lawsuit", "jail",
-    "prison", "arrested", "charged", "police", "crime", "victim", "victims", "tragedy",
-    "tragic", "funeral", "rip", "suicide", "overdose", "abuse", "assault", "harassment",
-    "cancer", "hospital", "hospitalized", "illness", "crash", "crashed", "accident",
-    "earthquake", "wildfire", "flood", "hurricane", "missing", "kidnapped", "racist",
+    "senate", "congress", "politics", "political", "lawsuit",
+    "prison", "arrested", "crime", "victim", "victims", "tragedy",
+    "tragic", "funeral", "suicide", "overdose", "abuse", "assault", "harassment",
+    "cancer", "hospitalized", "illness",
+    "earthquake", "wildfire", "flood", "hurricane", "kidnapped", "racist",
     "racism", "layoffs", "recession", "stocks", "inflation", "deported", "immigration",
+    "جنگ", "کشته", "اعدام", "ترور", "حمله", "موشک", "بمب", "زلزله", "سیل", "تصادف", "فوت",
+    "درگذشت", "تسلیت", "قتل", "خودکشی", "بازداشت", "دستگیر", "زندان", "دادگاه", "تحریم",
+    "انتخابات", "مجلس", "رئیس‌جمهور", "رئیس جمهور", "دولت", "ترامپ", "اسرائیل", "غزه",
+    "تورم", "دلار", "گرانی", "بورس", "اعتراض", "سرطان", "بیمارستان",
+]
+
+# کلمه‌های دوپهلو: در خبر جدی‌اند ولی در شوخی اصطلاح‌اند («dead 💀»، «killed it»).
+# فقط وقتی حذف می‌کنند که پست هیچ نشانه‌ی خنده‌ای (😂 💀 lol …) نداشته باشد
+soft_blocked_keywords = [
+    "died", "dies", "dead", "killed", "kills", "rip", "court", "jail", "charged", "police",
+    "president", "hospital", "crash", "crashed", "accident", "missing",
 ]

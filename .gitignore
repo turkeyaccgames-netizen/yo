@@ -1,7 +1,10 @@
 .env*
 !.env.example
 state-local.json
+*.broken.json
+*.json.tmp
 local-run.log
+local-run.log.1
 __pycache__/
 *.pyc
 venv/

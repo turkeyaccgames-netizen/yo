@@ -1,6 +1,7 @@
 import re
 import threading
 import time
+import urllib.request
 from dataclasses import dataclass
 
 from curl_cffi import requests
@@ -10,6 +11,7 @@ PLATFORM_LABELS = {
     "instagram": "📸 Instagram",
     "tiktok": "🎵 TikTok",
     "x": "𝕏 X",
+    "telegram": "✈️ Telegram",
 }
 
 
@@ -25,6 +27,8 @@ class Post:
     likes: int | None = None
     timestamp: int | None = None
     is_video: bool = False
+    # How many times this account's usual numbers the post reached; filled in by scoring.annotate.
+    outlier: float | None = None
 
     @property
     def key(self) -> str:
@@ -34,32 +38,65 @@ class Post:
     def popularity(self) -> int:
         return self.views if self.views is not None else (self.likes or 0)
 
+    @property
+    def heat(self) -> float:
+        """Popularity weighted by how unusual it is for this account, so a small page's hit can outrank
+        a huge page's ordinary day."""
+        return self.popularity * min(max(self.outlier or 1.0, 0.5), 8.0)
+
 
 class SourceError(Exception):
     pass
+
+
+class BlockedError(SourceError):
+    """The site answered, but refuses this IP (a Cloudflare challenge or a login wall). Retrying will not help."""
 
 
 _local = threading.local()
 
 
 RETRY_STATUSES = (429, 500, 502, 503, 504)
+_CURL_NOISE = re.compile(r"Failed to perform, curl: \(\d+\) |\. See https://curl\.se/\S+ first for more details\.?")
+
+
+def system_proxies() -> dict:
+    """The proxy Windows is set to use (v2rayN, NekoBox, Hiddify in "system proxy" mode), or HTTP(S)_PROXY.
+
+    yt-dlp already follows it, curl_cffi does not: without this, TikTok went through the VPN while YouTube,
+    X, the Instagram mirrors and Telegram went out directly and were reset by the filter.
+    """
+    proxies = urllib.request.getproxies()
+    return {k: v for k, v in proxies.items() if k in ("http", "https")}
+
+
+def new_session() -> requests.Session:
+    return requests.Session(impersonate="chrome", proxies=system_proxies() or None)
+
+
+def short_error(e: Exception) -> str:
+    return f"{type(e).__name__}: {_CURL_NOISE.sub('', str(e))}"
 
 
 def http_get(url: str, *, params=None, headers=None, cookies=None, timeout=30, retries=2, retry_statuses=RETRY_STATUSES):
     if not hasattr(_local, "session"):
-        _local.session = requests.Session(impersonate="chrome")
+        _local.session = new_session()
     last = None
     for attempt in range(retries + 1):
+        if attempt:
+            time.sleep(2 * attempt)
         try:
             r = _local.session.get(url, params=params, headers=headers, cookies=cookies, timeout=timeout)
-            if r.status_code == 200:
-                return r
-            last = SourceError(f"HTTP {r.status_code} for {url}")
-            if r.status_code not in retry_statuses:
-                break
         except Exception as e:  # network errors
-            last = SourceError(f"{type(e).__name__}: {e}")
-        time.sleep(2 * (attempt + 1))
+            last = SourceError(short_error(e))
+            continue
+        if r.status_code == 200:
+            return r
+        if r.status_code == 403 and r.headers.get("cf-mitigated") == "challenge":
+            raise BlockedError(f"Cloudflare challenge for {url} (this IP is blocked; try another VPN server)")
+        last = SourceError(f"HTTP {r.status_code} for {url}")
+        if r.status_code not in retry_statuses:
+            break
     raise last
 
 

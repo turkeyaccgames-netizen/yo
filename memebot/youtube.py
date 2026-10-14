@@ -3,6 +3,8 @@ import time
 import xml.etree.ElementTree as ET
 from datetime import datetime, timezone
 
+from yt_dlp import YoutubeDL
+
 from .common import Post, SourceError, http_get
 
 NS = {
@@ -31,6 +33,43 @@ def resolve_channel_id(ref: str, cache: dict) -> str:
 
 
 def fetch_channel(channel_id: str, shorts_only: bool = False) -> list[Post]:
+    """The RSS feed first (it has dates); when YouTube has it down, which happens for hours at a time, yt-dlp."""
+    try:
+        return _from_feed(channel_id, shorts_only)
+    except Exception as feed_error:
+        try:
+            return _from_channel_tab(channel_id, shorts_only)
+        except Exception as e:
+            raise SourceError(f"feed: {feed_error} | yt-dlp: {str(e)[:150]}")
+
+
+def _from_channel_tab(channel_id: str, shorts_only: bool, limit: int = 5) -> list[Post]:
+    """Only the newest few: this listing has no upload dates, so the age filter cannot catch an old video."""
+    tab = "shorts" if shorts_only else "videos"
+    opts = {"extract_flat": True, "playlistend": limit, "quiet": True, "no_warnings": True, "skip_download": True}
+    with YoutubeDL(opts) as ydl:
+        info = ydl.extract_info(f"https://www.youtube.com/channel/{channel_id}/{tab}", download=False)
+    author = info.get("channel") or info.get("uploader") or channel_id
+    posts = []
+    for e in info.get("entries") or []:
+        if not e or not e.get("id"):
+            continue
+        posts.append(Post(
+            platform="youtube",
+            id=e["id"],
+            author=author,
+            url=f"https://www.youtube.com/shorts/{e['id']}" if shorts_only else f"https://www.youtube.com/watch?v={e['id']}",
+            text=e.get("title") or "",
+            thumbnail=f"https://i.ytimg.com/vi/{e['id']}/hqdefault.jpg",
+            views=e.get("view_count"),
+            is_video=True,
+        ))
+    if not posts:
+        raise SourceError(f"no videos in the {tab} tab")
+    return posts
+
+
+def _from_feed(channel_id: str, shorts_only: bool) -> list[Post]:
     r = http_get("https://www.youtube.com/feeds/videos.xml", params={"channel_id": channel_id})
     root = ET.fromstring(r.content)
     posts = []

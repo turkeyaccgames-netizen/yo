@@ -28,7 +28,8 @@ STOPWORDS = {
     "back", "down", "still", "even", "ever", "never", "every", "want", "need", "make", "made", "says",
     "said", "say", "see", "saw", "know", "think", "going", "gonna", "guys", "video", "watch", "via",
     "follow", "link", "bio", "comment", "comments", "share", "tag", "tags", "credit", "tiktok",
-    "instagram", "twitter", "shorts", "short", "subscribe", "full", "part", "day", "days", "today",
+    "instagram", "twitter", "youtube", "telegram", "shorts", "short", "subscribe", "full", "part", "day",
+    "days", "today", "breaking", "news", "update", "official", "trailer", "episode", "live",
     "time", "year", "years", "people", "man", "men", "woman", "women", "guy", "girl", "boy", "while",
     "during", "because", "might", "many", "thing", "things", "first", "last", "next", "another",
     "really", "actually", "literally", "something", "anything", "everything", "nothing", "someone",
@@ -61,6 +62,11 @@ LAUGH = ("😂", "🤣", "💀", "😭", "🤡", "😹", "💔", "🥲", "lol", 
 # A sponsored line is never the funny part.
 AD_MARKERS = ("#ad", "sponsor", "promo code", "use code", "discount code", "casino", "roobet",
               "betting", "odds", "link in bio", "swipe up", "available now at", "shop now")
+
+
+def is_ad(post: Post) -> bool:
+    low = (post.text or "").lower()
+    return any(m in low for m in AD_MARKERS)
 
 
 @dataclass
@@ -146,9 +152,22 @@ def _is_meme_shaped(post: Post) -> bool:
     return any(re.search(pattern, low) for pattern in CAPTION_PATTERNS) or any(m in low for m in LAUGH)
 
 
+def clip_score(video: Post, is_funny=lambda p: False, bonus=lambda p: 0.0) -> float:
+    """How promising a clip is on its own: reach, how unusual that reach is for its account, and taste."""
+    score = math.log10(max(video.popularity, 10))
+    if video.outlier:
+        score += max(-1.0, min(math.log2(video.outlier), 3.0))
+    score += 1.0 if is_funny(video) else 0.0
+    score += 1.0 if _is_meme_shaped(video) else 0.0
+    return score + bonus(video)
+
+
 def find_pairs(tweets: list[Post], videos: list[Post], cfg: dict, is_funny=lambda p: False,
-               require_funny: bool = True) -> list[dict]:
-    """Pairs a caption-shaped tweet with a funny clip. Same topic scores higher, but is not required."""
+               require_funny: bool = True, bonus=lambda p: 0.0) -> list[dict]:
+    """Pairs a caption-shaped tweet with a funny clip. Same topic scores higher, but is not required.
+
+    `bonus` adds what the owner's 👍/👎 history says about a clip's account.
+    """
     bags = {p.key: bag_of(p.text) for p in tweets + videos}
     weights = topic_weights(list(bags.values()))
     captions = [(p, caption_quality(p, is_funny(p))) for p in tweets]
@@ -167,9 +186,7 @@ def find_pairs(tweets: list[Post], videos: list[Post], cfg: dict, is_funny=lambd
             if _similar_text(a, b) >= cfg.get("max_text_similarity", 0.4):
                 continue
             shared = sorted(a.topics & b.topics)
-            score = quality + math.log10(max(video.popularity, 10))
-            score += 1.0 if is_funny(video) else 0.0
-            score += 1.0 if _is_meme_shaped(video) else 0.0
+            score = quality + clip_score(video, is_funny, bonus)
             score += sum(weights.get(t, 1.0) for t in shared)  # same topic: a real bonus, when it happens
             scored.append({"score": score, "shared": shared, "tweet": tweet, "video": video})
     scored.sort(key=lambda c: c["score"], reverse=True)

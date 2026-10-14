@@ -1,4 +1,5 @@
 """Downloads a clip so the bot can hand over the actual file, not just a link."""
+import os
 import shutil
 import tempfile
 from pathlib import Path
@@ -35,6 +36,10 @@ def download_video(url: str, max_mb: int = 45) -> Path | None:
         "retries": 2,
         "impersonate": ImpersonateTarget.from_str("chrome"),
     }
+    session = os.environ.get("INSTAGRAM_SESSIONID", "").strip()
+    if session and "instagram.com" in url:
+        # Instagram hands a reel to a logged-in visitor far more willingly.
+        opts["http_headers"] = {"Cookie": f"sessionid={session}"}
     ffmpeg = _ffmpeg_location()
     if ffmpeg:
         opts["ffmpeg_location"] = ffmpeg
@@ -43,12 +48,13 @@ def download_video(url: str, max_mb: int = 45) -> Path | None:
             ydl.extract_info(url, download=True)
     except Exception as e:
         print(f"  دانلود ویدیو نشد ({url}): {str(e)[:120]}")
+        shutil.rmtree(tmp, ignore_errors=True)
         return None
     files = [f for f in tmp.iterdir() if f.is_file() and f.stat().st_size > 0]
-    if not files:
-        return None
-    clip = max(files, key=lambda f: f.stat().st_size)
-    if clip.stat().st_size > max_mb * 1024 * 1024:
+    clip = max(files, key=lambda f: f.stat().st_size) if files else None
+    if clip and clip.stat().st_size > max_mb * 1024 * 1024:
         print(f"  ویدیو بزرگ‌تر از {max_mb} مگابایت بود: {url}")
-        return None
+        clip = None
+    if clip is None:
+        shutil.rmtree(tmp, ignore_errors=True)
     return clip

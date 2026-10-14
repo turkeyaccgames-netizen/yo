@@ -9,7 +9,7 @@ import tomllib
 from concurrent.futures import ThreadPoolExecutor
 from pathlib import Path
 
-from memebot import combos, filters, instagram, media, tiktok, x, youtube
+from memebot import ai, combos, filters, instagram, media, render, scoring, tgchannels, tiktok, x, youtube
 from memebot.common import PLATFORM_LABELS
 from memebot.telegram import Telegram, TelegramConnectionError, TelegramError, author_link, esc, shorten, stats_line
 
@@ -21,6 +21,7 @@ TREND_TITLES = {
     "instagram": "پست‌های پرلایک اینستاگرام",
     "tiktok": "ویدیوهای ترند تیک‌تاک",
     "x": "توییت‌های پربازدید X",
+    "telegram": "پست‌های پربازدید کانال‌های تلگرام",
 }
 
 
@@ -35,9 +36,16 @@ def load_env(path: Path):
 
 
 def load_state(path: Path) -> dict:
-    state = {"seen": {}, "trend_sent": {}, "initialized": [], "yt_ids": {}, "failures": {}, "last_trends": 0}
+    state = {"seen": {}, "trend_sent": {}, "combo_sent": {}, "initialized": [], "yt_ids": {}, "failures": {},
+             "alerted": [], "last_trends": 0}
     if path.exists():
-        state.update(json.loads(path.read_text(encoding="utf-8")))
+        try:
+            state.update(json.loads(path.read_text(encoding="utf-8")))
+        except ValueError as e:
+            # A half-written file must not stop the bot for good; keep it for a look and start over.
+            broken = path.with_suffix(".broken.json")
+            path.replace(broken)
+            print(f"{path.name} خراب بود ({e})؛ به {broken.name} منتقل شد و از نو شروع می‌شود.")
     return state
 
 
@@ -46,7 +54,11 @@ def save_state(state: dict, path: Path):
     state["seen"] = {k: t for k, t in state["seen"].items() if now - t < 30 * 86400}
     state["trend_sent"] = {k: t for k, t in state["trend_sent"].items() if now - t < 7 * 86400}
     state["combo_sent"] = {k: t for k, t in state.get("combo_sent", {}).items() if now - t < 7 * 86400}
-    path.write_text(json.dumps(state, indent=1, ensure_ascii=False, sort_keys=True), encoding="utf-8")
+    state["vote_meta"] = {k: v for k, v in state.get("vote_meta", {}).items() if now - v[1] < 14 * 86400}
+    # Write aside and swap, so a run killed mid-write (sleep, shutdown) never leaves a broken file.
+    tmp = path.with_name(path.name + ".tmp")
+    tmp.write_text(json.dumps(state, indent=1, ensure_ascii=False, sort_keys=True), encoding="utf-8")
+    tmp.replace(path)
 
 
 def collect(cfg: dict, state: dict, platforms: list[str] | None = None):
@@ -58,7 +70,9 @@ def collect(cfg: dict, state: dict, platforms: list[str] | None = None):
         "instagram": (cfg["instagram"]["accounts"], instagram.fetch_account, 2),
         "tiktok": (cfg["tiktok"]["accounts"], tiktok.fetch_account, 3),
         "x": (cfg["x"]["accounts"], x.fetch_account, 4),
+        "telegram": (cfg["telegram"]["accounts"], tgchannels.fetch_channel, 3),
     }
+    jobs = {name: job for name, job in jobs.items() if job[0]}  # a platform with no accounts is switched off
     if platforms is not None:
         jobs = {name: job for name, job in jobs.items() if name in platforms}
     results, errors = {}, {}
@@ -79,6 +93,7 @@ def collect(cfg: dict, state: dict, platforms: list[str] | None = None):
                 else:
                     results[platform][account] = posts
                     print(f"[{platform}] {account}: {len(posts)} posts")
+    scoring.annotate([p for accounts in results.values() for posts in accounts.values() for p in posts], state)
     return results, errors
 
 
@@ -111,6 +126,8 @@ def send_new_posts(results: dict, cfg: dict, state: dict, tg: Telegram, allowed:
                 if p not in sendable:
                     state["seen"][p.key] = int(now)
             for p in sendable:
+                if tg.offline:
+                    break  # left unseen, so the next run sends them
                 try:
                     tg.send_post(p)
                     state["seen"][p.key] = int(now)
@@ -144,7 +161,9 @@ def send_trends(results: dict, cfg: dict, state: dict, tg: Telegram, allowed: se
 
     fcfg = cfg["filters"]
     for platform, posts in candidates.items():
-        unique = {p.key: p for p in posts if p.key not in state["trend_sent"]}.values()
+        if tg.offline:
+            break
+        unique = {p.key: p for p in posts if p.key not in state["trend_sent"] and not combos.is_ad(p)}.values()
         pool = filters.drop_serious(list(unique), fcfg)
         if fcfg.get("funny_first", True):
             # Keep only the funny/cool ones, unless that leaves too few to fill the digest.
@@ -152,7 +171,8 @@ def send_trends(results: dict, cfg: dict, state: dict, tg: Telegram, allowed: se
             if len(funny) >= t["top_n"]:
                 pool = funny
         top, per_author = [], {}
-        for p in sorted(pool, key=lambda p: p.popularity, reverse=True):
+        # heat, not raw views: a small page's breakout beats a huge page's ordinary day.
+        for p in sorted(pool, key=lambda p: p.heat, reverse=True):
             if len(top) < t["top_n"] and per_author.get(p.author.lower(), 0) < 2:
                 top.append(p)
                 per_author[p.author.lower()] = per_author.get(p.author.lower(), 0) + 1
@@ -180,25 +200,74 @@ def send_trends(results: dict, cfg: dict, state: dict, tg: Telegram, allowed: se
                 state["trend_sent"][p.key] = int(now)
         except Exception as e:
             print(f"[{platform}] trend digest send failed: {e}")
-    state["last_trends"] = int(now)
+    # Telegram down or nothing collected (no internet): the next run tries again instead of waiting hours.
+    if not tg.offline and any(candidates.values()):
+        state["last_trends"] = int(now)
+
+
+def vote_buttons(post) -> dict | None:
+    """👍/👎 under a suggestion; the taps are read back on the next run and steer what gets picked."""
+    if len(f"vote:down:{post.key}".encode()) > 64:  # Telegram's limit for a button's payload
+        return None
+    return {"inline_keyboard": [[{"text": "👍 خوب بود", "callback_data": f"vote:up:{post.key}"},
+                                 {"text": "👎 به درد نخورد", "callback_data": f"vote:down:{post.key}"}]]}
+
+
+def read_votes(state: dict, tg: Telegram):
+    votes, state["tg_offset"] = tg.read_votes(state.get("tg_offset", 0))
+    taste = state.setdefault("taste", {})
+    for key, delta in votes:
+        account = state.get("vote_meta", {}).get(key)
+        if account:
+            taste[account[0]] = taste.get(account[0], 0) + delta
+    if votes:
+        print(f"votes read: {len(votes)}")
 
 
 def send_pair(combo: dict, ccfg: dict, tg: Telegram):
-    """One ready-to-make meme: the clip as a real file, plus the line to lay over it."""
+    """One ready-to-post meme: the clip with the line already on it, plus the line as copyable text."""
     tweet, video = combo["tweet"], combo["video"]
+    text = combo.get("text") or " ".join(tweet.text.split())
+    local = combo.get("local") or text
     topic = f" · موضوع مشترک: {esc(', '.join(combo['shared']))}" if combo["shared"] else ""
+    badge = " · 🤖 انتخاب هوش مصنوعی" if combo.get("by_ai") else ""
+    original = f"\n🌐 متن اصلی: <code>{esc(text)}</code>" if local != text else ""
+    links = f"🔗 <a href=\"{esc(video.url)}\">کلیپ</a>"
+    if tweet:
+        links += f" · <a href=\"{esc(tweet.url)}\">توییت</a>"
     caption = (
-        f"🎬 <b>ترکیب پیشنهادی</b>{topic}\n\n"
-        f"✍️ متن روی کلیپ (لمس کن تا کپی شود):\n<code>{esc(' '.join(tweet.text.split()))}</code>\n\n"
-        f"📹 کلیپ از {author_link(video)} · {stats_line(video)}\n"
-        f"🔗 <a href=\"{esc(video.url)}\">کلیپ</a> · <a href=\"{esc(tweet.url)}\">توییت</a>"
+        f"🎬 <b>ترکیب پیشنهادی</b>{topic}{badge}\n\n"
+        f"✍️ متن روی کلیپ (لمس کن تا کپی شود):\n<code>{esc(local)}</code>{original}\n\n"
+        f"📹 کلیپ از {author_link(video)} · {stats_line(video)}\n{links}"
     )
+    buttons = vote_buttons(video)
     clip = media.download_video(video.url, ccfg.get("max_video_mb", 45))
-    sent = tg.send_video_file(clip, caption, video.url) if clip else False
-    if clip:
-        shutil.rmtree(clip.parent, ignore_errors=True)
+    try:
+        # The finished meme when it can be made; otherwise the plain clip, which is still usable.
+        meme = render.make_meme(clip, local, ccfg.get("max_video_mb", 45)) if clip and ccfg.get("render_meme", True) else None
+        sent = tg.send_video_file(meme or clip, caption, video.url, buttons) if clip else False
+    finally:
+        if clip:
+            shutil.rmtree(clip.parent, ignore_errors=True)
     if not sent:  # download blocked or upload refused: the links still do the job
-        tg.send_card(caption, video.thumbnail, video.url)
+        tg.send_card(caption, video.thumbnail, video.url, buttons)
+
+
+def pick_pairs(tweets: list, clips: list, cfg: dict, state: dict) -> list[dict]:
+    """Claude's pairing when a key is set and it answers; the keyword matcher otherwise."""
+    ccfg, fcfg, acfg = cfg["combos"], cfg["filters"], cfg.get("ai", {})
+    funny = lambda p: filters.is_funny(p, fcfg)  # noqa: E731
+    bonus = lambda p: scoring.taste_bonus(p, state)  # noqa: E731
+    if ai.enabled(acfg):
+        ranked = sorted((p for p in clips if p.popularity >= ccfg.get("min_video_views", 5000)),
+                        key=lambda p: combos.clip_score(p, funny, bonus), reverse=True)
+        lines = sorted(((combos.caption_quality(p, funny(p)), p) for p in tweets), key=lambda qp: qp[0], reverse=True)
+        pairs = ai.make_pairs([p for q, p in lines if q > 0], ranked, ccfg.get("pairs_per_run", 3), acfg)
+        if pairs is not None:
+            print(f"[ai] {len(pairs)} pairs proposed")
+            return pairs
+    return combos.find_pairs(tweets, clips, ccfg, is_funny=funny,
+                             require_funny=ccfg.get("funny_only", True), bonus=bonus)
 
 
 def send_pack(pack: dict, tg: Telegram):
@@ -216,25 +285,28 @@ def send_combos(results: dict, cfg: dict, state: dict, tg: Telegram):
     posts = [p for accounts in results.values() for ps in accounts.values() for p in ps
              if p.timestamp and now - p.timestamp <= ccfg.get("window_hours", 48) * 3600]
     posts = filters.drop_serious(posts, fcfg)
-    funny = lambda p: filters.is_funny(p, fcfg)  # noqa: E731
-    tweets = [p for p in posts if p.platform == "x"]
-    clips = [p for p in posts if p.platform != "x" and p.is_video]
-    state.setdefault("combo_sent", {})
+    read_votes(state, tg)
+    used = state.setdefault("combo_sent", {})
+    clip_platforms = ccfg.get("clip_platforms", ["tiktok", "instagram", "youtube"])
+    # A tweet or a clip is suggested once; otherwise the same hit clip comes back every run with a new line.
+    tweets = [p for p in posts if p.platform == "x" and p.key not in used]
+    clips = [p for p in posts if p.platform in clip_platforms and p.is_video and p.key not in used
+             and not scoring.is_muted(p, state)]  # an account the owner keeps voting down
 
     sent = 0
-    for combo in combos.find_pairs(tweets, clips, ccfg, is_funny=funny,
-                                   require_funny=ccfg.get("funny_only", True)):
-        if sent >= ccfg.get("pairs_per_run", 3):
+    for combo in pick_pairs(tweets, clips, cfg, state):
+        if sent >= ccfg.get("pairs_per_run", 3) or tg.offline:
             break
-        key = f"{combo['tweet'].key}+{combo['video'].key}"
-        if key in state["combo_sent"] or combo["tweet"].key in state["combo_sent"]:
-            continue
         try:
             send_pair(combo, ccfg, tg)
         except Exception as e:
             print(f"[combos] ارسال ترکیب نشد: {e}")
             continue
-        state["combo_sent"][key] = state["combo_sent"][combo["tweet"].key] = int(now)
+        video = combo["video"]
+        used[video.key] = int(now)
+        if combo["tweet"]:
+            used[combo["tweet"].key] = int(now)
+        state.setdefault("vote_meta", {})[video.key] = [scoring.account_key(video), int(now)]
         sent += 1
 
     hot = set()
@@ -246,41 +318,63 @@ def send_combos(results: dict, cfg: dict, state: dict, tg: Telegram):
         print(f"[combos] گرفتن موضوعات ترند نشد: {e}")
     packs = 0
     for pack in combos.find_packs(posts, ccfg, hot_topics=hot):
-        if packs >= ccfg.get("packs_per_run", 1):
+        if packs >= ccfg.get("packs_per_run", 1) or tg.offline:
             break
         key = f"pack:{pack['topic']}"
-        if key in state["combo_sent"]:
+        if key in used:
             continue
         try:
             send_pack(pack, tg)
         except Exception as e:
             print(f"[combos] ارسال بسته نشد: {e}")
             continue
-        state["combo_sent"][key] = int(now)
+        used[key] = int(now)
         packs += 1
     print(f"combos sent: {sent} pairs, {packs} packs")
-    state["last_combos"] = int(now)
+    if not tg.offline and posts:
+        state["last_combos"] = int(now)
 
 
-def track_failures(results: dict, errors: dict, state: dict, tg: Telegram):
+def track_failures(results: dict, errors: dict, state: dict, tg: Telegram, alert_for: set[str] | None = None):
+    """Warns once when a source has fully failed FAIL_ALERT_AFTER runs in a row, and once when it is back.
+
+    `alert_for` limits the messages to the platforms this run is responsible for, so the PC run does not
+    repeat warnings about sources the GitHub run already watches.
+    """
     state.setdefault("last_error", {})
+    alerted = set(state.get("alerted", []))
     for platform in list(state["failures"]):
         if platform not in errors:  # not collected in this run, so its old counter means nothing
             state["failures"].pop(platform, None)
             state["last_error"].pop(platform, None)
+            alerted.discard(platform)
+    down = {platform for platform, errs in errors.items() if errs and not results[platform]}
+    if len(errors) > 1 and down == set(errors):
+        # Every source failed together: this machine's internet or VPN is down, not the sources.
+        print("همه‌ی منابع با هم خطا دادند؛ مشکل از اینترنت یا VPN همین سیستم است، نه از منابع.")
+        state["alerted"] = sorted(alerted)
+        return
     for platform, errs in errors.items():
         # Kept in state.json so a failure on the GitHub servers can be diagnosed later.
         state["last_error"][platform] = errs[0][:500] if errs else ""
-        previous = state["failures"].get(platform, 0)
-        if errs and not results[platform]:
-            state["failures"][platform] = previous + 1
-            if previous + 1 == FAIL_ALERT_AFTER:
-                tg.send_text(f"⚠️ منبع <b>{PLATFORM_LABELS[platform]}</b> {FAIL_ALERT_AFTER} بار پشت سر هم کار نکرد.\n"
+        state["failures"][platform] = state["failures"].get(platform, 0) + 1 if platform in down else 0
+        if alert_for is not None and platform not in alert_for:
+            continue
+        try:
+            if platform in down and state["failures"][platform] >= FAIL_ALERT_AFTER and platform not in alerted:
+                hint = ""
+                if "blocked" in errs[0].lower() or "cloudflare" in errs[0].lower():
+                    hint = "\nسایت منبع آی‌پی VPN را بلاک کرده. سرور یا لوکیشن VPN را عوض کن."
+                tg.send_text(f"⚠️ منبع <b>{PLATFORM_LABELS[platform]}</b> "
+                             f"{state['failures'][platform]} بار پشت سر هم کار نکرد.{hint}\n"
                              f"<code>{esc(errs[0][:300])}</code>")
-        else:
-            if previous >= FAIL_ALERT_AFTER:
+                alerted.add(platform)
+            elif platform not in down and platform in alerted:
                 tg.send_text(f"✅ منبع <b>{PLATFORM_LABELS[platform]}</b> دوباره کار می‌کند.")
-            state["failures"][platform] = 0
+                alerted.discard(platform)
+        except TelegramError as e:  # not marked as sent, so the next run tries again
+            print(f"[{platform}] هشدار خرابی فرستاده نشد: {e}")
+    state["alerted"] = sorted(alerted)
 
 
 def setup_output():
@@ -288,7 +382,7 @@ def setup_output():
     if sys.stdout is None or sys.stderr is None:
         log = ROOT / "local-run.log"
         if log.exists() and log.stat().st_size > 1_000_000:
-            log.write_text("", encoding="utf-8")
+            log.replace(log.with_name(log.name + ".1"))  # the previous stretch stays readable
         stream = open(log, "a", encoding="utf-8", buffering=1)
         sys.stdout = sys.stderr = stream
         print(f"\n===== {time.strftime('%Y-%m-%d %H:%M')} =====")
@@ -331,11 +425,20 @@ def main():
         print("پیام تست فرستاده شد.")
         return
 
+    def platforms(flag: str, value: str) -> set[str] | None:
+        names = {p.strip().lower() for p in value.split(",") if p.strip()}
+        if unknown := names - set(PLATFORM_LABELS):
+            parser.error(f"{flag}: unknown platform {', '.join(sorted(unknown))} (use {','.join(PLATFORM_LABELS)})")
+        return names or None
+
+    only, skip = platforms("--only", args.only), platforms("--skip", args.skip) or set()
+    uploads, trend_platforms = platforms("--uploads", args.uploads), platforms("--trend-platforms", args.trend_platforms)
+    chosen = [p for p in PLATFORM_LABELS if (only is None or p in only) and p not in skip]
+
     cfg = tomllib.loads((ROOT / "config.toml").read_text(encoding="utf-8"))
+    cfg.setdefault("telegram", {}).setdefault("accounts", [])  # a config from before this section existed
     state_file = Path(args.state) if Path(args.state).is_absolute() else ROOT / args.state
     state = load_state(state_file)
-    chosen = [p.strip() for p in args.only.split(",") if p.strip()] or list(PLATFORM_LABELS)
-    chosen = [p for p in chosen if p not in {s.strip() for s in args.skip.split(",")}]
     results, errors = collect(cfg, state, chosen)
 
     if args.sample:
@@ -346,25 +449,28 @@ def main():
                 print(f"[{platform}] پیام تست فرستاده شد")
         return
 
-    if not state["initialized"]:
-        counts = " · ".join(f"{PLATFORM_LABELS[p]}: {len(cfg[p]['channels' if p == 'youtube' else 'accounts'])}" for p in chosen)
-        tg.send_text(f"✅ <b>ربات میم فعال شد</b>\n\nاکانت‌های زیرنظر: {counts}\n"
-                     f"از این به بعد پست‌های جدید همینجا فرستاده میشه و هر {cfg['settings']['trends_every_hours']} ساعت "
-                     f"یک گزارش ترند می‌گیری.")
+    try:
+        if not state["initialized"]:
+            counts = " · ".join(f"{PLATFORM_LABELS[p]}: {len(cfg[p]['channels' if p == 'youtube' else 'accounts'])}" for p in chosen)
+            tg.send_text(f"✅ <b>ربات میم فعال شد</b>\n\nاکانت‌های زیرنظر: {counts}\n"
+                         f"از این به بعد پست‌های جدید همینجا فرستاده میشه و هر {cfg['settings']['trends_every_hours']} ساعت "
+                         f"یک گزارش ترند می‌گیری.")
 
-    uploads = {p.strip() for p in args.uploads.split(",") if p.strip()} or None
-    trend_platforms = {p.strip() for p in args.trend_platforms.split(",") if p.strip()} or None
-    sent = send_new_posts(results, cfg, state, tg, uploads)
-    print(f"new posts sent: {sent}")
-    if not args.no_trends and (args.trends or time.time() - state["last_trends"] >= cfg["settings"]["trends_every_hours"] * 3600 - 600):
-        send_trends(results, cfg, state, tg, trend_platforms)
-    combo_cfg = cfg.get("combos", {})
-    if not args.no_combos and combo_cfg.get("enabled", True) and (
-            args.combos or time.time() - state.get("last_combos", 0) >= combo_cfg.get("every_hours", 3) * 3600 - 600):
-        send_combos(results, cfg, state, tg)
-    track_failures(results, errors, state, tg)
-    if not args.dry_run:
-        save_state(state, state_file)
+        sent = send_new_posts(results, cfg, state, tg, uploads)
+        print(f"new posts sent: {sent}")
+        if not args.no_trends and (args.trends or time.time() - state["last_trends"] >= cfg["settings"]["trends_every_hours"] * 3600 - 600):
+            send_trends(results, cfg, state, tg, trend_platforms)
+        combo_cfg = cfg.get("combos", {})
+        if not args.no_combos and combo_cfg.get("enabled", True) and (
+                args.combos or time.time() - state.get("last_combos", 0) >= combo_cfg.get("every_hours", 3) * 3600 - 600):
+            send_combos(results, cfg, state, tg)
+        track_failures(results, errors, state, tg, alert_for=uploads)
+    finally:
+        # Saved even when Telegram dropped halfway, or everything already sent would be sent again next run.
+        if not args.dry_run:
+            save_state(state, state_file)
+    if tg.offline:  # reported as a failed run, so the scheduled task's LastTaskResult shows it
+        raise tg.offline
 
 
 if __name__ == "__main__":
