@@ -186,6 +186,23 @@ class Render(unittest.TestCase):
                 if len(sys.argv) > 1 and sys.argv[-1] == "--keep-frame":
                     image.save(ROOT / "meme-sample.png")
 
+    def test_audio_only_download_is_not_a_clip(self):
+        import subprocess
+
+        from memebot import media
+
+        ffmpeg = render.ffmpeg_exe()
+        if not ffmpeg:
+            self.skipTest("no ffmpeg")
+        with tempfile.TemporaryDirectory() as tmp:
+            audio, video = Path(tmp) / "a.m4a", Path(tmp) / "v.mp4"
+            subprocess.run([ffmpeg, "-y", "-loglevel", "error", "-f", "lavfi", "-i", "sine=frequency=440",
+                            "-t", "1", "-c:a", "aac", str(audio)], check=True, stdin=subprocess.DEVNULL)
+            subprocess.run([ffmpeg, "-y", "-loglevel", "error", "-f", "lavfi", "-i", "testsrc=size=320x240",
+                            "-t", "1", "-c:v", "libx264", str(video)], check=True, stdin=subprocess.DEVNULL)
+            self.assertFalse(media.has_video(audio))
+            self.assertTrue(media.has_video(video))
+
     def test_wall_of_text_is_refused(self):
         with tempfile.TemporaryDirectory() as tmp:
             self.assertIsNone(render.caption_band("word " * 200, Path(tmp) / "band.png"))

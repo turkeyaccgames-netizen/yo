@@ -1,6 +1,7 @@
 """Downloads a clip so the bot can hand over the actual file, not just a link."""
 import os
 import shutil
+import subprocess
 import tempfile
 from pathlib import Path
 
@@ -18,6 +19,22 @@ def _ffmpeg_location() -> str | None:
         return imageio_ffmpeg.get_ffmpeg_exe()
     except Exception:
         return None
+
+
+def has_video(path: Path) -> bool:
+    """True unless ffmpeg can read the file and finds no picture in it (an unreadable check counts as yes)."""
+    from .render import ffmpeg_exe
+
+    ffmpeg = ffmpeg_exe()
+    if not ffmpeg:
+        return True
+    try:
+        probe = subprocess.run([ffmpeg, "-hide_banner", "-i", str(path)], capture_output=True, timeout=30,
+                               stdin=subprocess.DEVNULL)
+    except Exception:
+        return True
+    info = probe.stderr.decode("utf-8", "replace")
+    return "Stream #" not in info or "Video:" in info
 
 
 def download_video(url: str, max_mb: int = 45) -> Path | None:
@@ -54,6 +71,10 @@ def download_video(url: str, max_mb: int = 45) -> Path | None:
     clip = max(files, key=lambda f: f.stat().st_size) if files else None
     if clip and clip.stat().st_size > max_mb * 1024 * 1024:
         print(f"  ویدیو بزرگ‌تر از {max_mb} مگابایت بود: {url}")
+        clip = None
+    if clip and not has_video(clip):
+        # A TikTok photo slideshow downloads as its soundtrack only; better the cover and the link.
+        print(f"  فایل دانلودشده تصویر نداشت (احتمالاً اسلایدشو): {url}")
         clip = None
     if clip is None:
         shutil.rmtree(tmp, ignore_errors=True)
